@@ -60,7 +60,7 @@ jobs:
             cd ~/traintickets-api
             echo "${GHCR_TOKEN}" | docker login ghcr.io -u "${GHCR_USERNAME}" --password-stdin
             docker compose pull api
-            docker compose run --rm api npx prisma migrate deploy
+            docker compose run --rm -T api npx prisma migrate deploy
             docker compose up -d api
             sleep 5
             docker compose exec -T api node -e "fetch('http://127.0.0.1:3000/health').then((res) => { if (!res.ok) process.exit(1); console.log('health ok'); })"

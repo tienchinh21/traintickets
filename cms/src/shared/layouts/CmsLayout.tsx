@@ -1,8 +1,11 @@
 import {
   DashboardOutlined,
+  KeyOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
   MenuUnfoldOutlined,
+  SolutionOutlined,
+  SafetyCertificateOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
 import { Avatar, Button, Dropdown, Layout, Menu, Space, Typography } from 'antd'
@@ -23,6 +26,23 @@ const menuItems: MenuProps['items'] = [
     key: '/users',
     icon: <TeamOutlined />,
     label: 'Người dùng',
+  },
+  {
+    key: 'access-control',
+    icon: <SafetyCertificateOutlined />,
+    label: 'Phân quyền',
+    children: [
+      {
+        key: '/roles',
+        icon: <SolutionOutlined />,
+        label: 'Vai trò',
+      },
+      {
+        key: '/permissions',
+        icon: <KeyOutlined />,
+        label: 'Quyền',
+      },
+    ],
   },
 ]
 
@@ -56,8 +76,13 @@ export function CmsLayout() {
           theme="dark"
           mode="inline"
           selectedKeys={[location.pathname]}
+          defaultOpenKeys={['access-control']}
           items={menuItems}
-          onClick={({ key }) => navigate(key)}
+          onClick={({ key }) => {
+            if (key.startsWith('/')) {
+              navigate(key)
+            }
+          }}
         />
       </Sider>
 

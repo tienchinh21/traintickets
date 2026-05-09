@@ -1,4 +1,5 @@
 import type { components } from '@/lib/api/schema'
+import type { ApiSuccess } from '@/shared/api/types'
 
 export type LoginPayload = components['schemas']['LoginDto']
 export type RefreshTokenPayload = components['schemas']['RefreshTokenDto']
@@ -17,13 +18,6 @@ export type AuthUser = {
 export type AuthTokens = {
   accessToken: string
   refreshToken: string
-}
-
-export type ApiSuccess<T> = {
-  success: true
-  data: T
-  meta: Record<string, unknown>
-  message: string
 }
 
 export type AuthLoginData = AuthTokens & {

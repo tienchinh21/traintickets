@@ -1,18 +1,15 @@
 import { create } from 'zustand'
 import { persist } from 'zustand/middleware'
-
-type AuthUser = {
-  id: string
-  name: string
-  email: string
-  role: 'admin' | 'operator'
-}
+import type { AuthTokens, AuthUser } from '../types/auth.types'
 
 type AuthState = {
   isAuthenticated: boolean
-  token: string | null
+  accessToken: string | null
+  refreshToken: string | null
   user: AuthUser | null
-  login: (email: string) => void
+  setSession: (session: AuthTokens & { user: AuthUser }) => void
+  setUser: (user: AuthUser) => void
+  setTokens: (tokens: AuthTokens) => void
   logout: () => void
 }
 
@@ -20,23 +17,28 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set) => ({
       isAuthenticated: false,
-      token: null,
+      accessToken: null,
+      refreshToken: null,
       user: null,
-      login: (email) =>
+      setSession: ({ accessToken, refreshToken, user }) =>
         set({
           isAuthenticated: true,
-          token: 'demo-cms-token',
-          user: {
-            id: '1',
-            name: 'CMS Admin',
-            email,
-            role: 'admin',
-          },
+          accessToken,
+          refreshToken,
+          user,
+        }),
+      setUser: (user) => set({ user, isAuthenticated: true }),
+      setTokens: ({ accessToken, refreshToken }) =>
+        set({
+          accessToken,
+          refreshToken,
+          isAuthenticated: true,
         }),
       logout: () =>
         set({
           isAuthenticated: false,
-          token: null,
+          accessToken: null,
+          refreshToken: null,
           user: null,
         }),
     }),
@@ -44,7 +46,8 @@ export const useAuthStore = create<AuthState>()(
       name: 'traintickets-cms-auth',
       partialize: (state) => ({
         isAuthenticated: state.isAuthenticated,
-        token: state.token,
+        accessToken: state.accessToken,
+        refreshToken: state.refreshToken,
         user: state.user,
       }),
     },

@@ -9,7 +9,7 @@ import { Avatar, Button, Dropdown, Layout, Menu, Space, Typography } from 'antd'
 import type { MenuProps } from 'antd'
 import { useState } from 'react'
 import { Outlet, useLocation, useNavigate } from 'react-router-dom'
-import { useAuthStore } from '@/features/auth/store/authStore'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 
 const { Header, Content, Sider } = Layout
 
@@ -30,17 +30,23 @@ export function CmsLayout() {
   const [collapsed, setCollapsed] = useState(false)
   const location = useLocation()
   const navigate = useNavigate()
-  const user = useAuthStore((state) => state.user)
-  const logout = useAuthStore((state) => state.logout)
+  const { user, logout } = useAuth()
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await logout()
     navigate('/login', { replace: true })
   }
 
   return (
     <Layout className="cms-shell">
-      <Sider trigger={null} collapsible collapsed={collapsed} breakpoint="lg">
+      <Sider
+        width={240}
+        collapsedWidth={72}
+        trigger={null}
+        collapsible
+        collapsed={collapsed}
+        breakpoint="lg"
+      >
         <div className="cms-brand">
           <div className="cms-brand-mark">T</div>
           {!collapsed && <span>TrainTickets</span>}
@@ -78,8 +84,8 @@ export function CmsLayout() {
           >
             <Button type="text" className="account-button">
               <Space>
-                <Avatar size="small">{user?.name.charAt(0) ?? 'A'}</Avatar>
-                <Typography.Text>{user?.name ?? 'Admin'}</Typography.Text>
+                <Avatar size="small">{user?.fullName.charAt(0) ?? 'A'}</Avatar>
+                <Typography.Text>{user?.fullName ?? 'Admin'}</Typography.Text>
               </Space>
             </Button>
           </Dropdown>

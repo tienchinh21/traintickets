@@ -57,6 +57,13 @@ a {
   margin-bottom: 8px;
 }
 
+.auth-loading {
+  display: grid;
+  min-height: 100vh;
+  place-items: center;
+  background: var(--color-canvas);
+}
+
 .cms-shell {
   min-height: 100vh;
 }

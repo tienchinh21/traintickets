@@ -1,0 +1,21 @@
+CREATE TABLE `stations` (
+  `id` BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  `code` VARCHAR(20) NOT NULL,
+  `name` VARCHAR(255) NOT NULL,
+  `slug` VARCHAR(255) NOT NULL,
+  `city` VARCHAR(100) NULL,
+  `address` VARCHAR(500) NULL,
+  `latitude` DECIMAL(10, 7) NULL,
+  `longitude` DECIMAL(10, 7) NULL,
+  `timezone` VARCHAR(50) NOT NULL DEFAULT 'Asia/Ho_Chi_Minh',
+  `status` ENUM('ACTIVE', 'INACTIVE') NOT NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  `deleted_at` DATETIME(3) NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `stations_code_key` (`code`),
+  UNIQUE KEY `stations_slug_key` (`slug`),
+  KEY `stations_name_idx` (`name`),
+  KEY `stations_city_idx` (`city`),
+  KEY `stations_status_idx` (`status`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

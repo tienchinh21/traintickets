@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { AppException } from '../../common/exceptions/app.exception';
 import { getPaginationOffset } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { CreateStationDto } from './dto/create-station.dto';
@@ -13,6 +14,8 @@ export class StationsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateStationDto) {
+    await this.ensureCodeIsUnique(dto.code);
+
     await this.prisma.station.create({
       data: dto
     });
@@ -79,6 +82,10 @@ export class StationsService {
   async update(id: string, dto: UpdateStationDto) {
     await this.findById(id);
 
+    if (dto.code) {
+      await this.ensureCodeIsUnique(dto.code, id);
+    }
+
     // TODO: Khi có trips, không cho đổi code nếu ga đã phát sinh chuyến,
     // trừ khi admin cấp cao xác nhận.
     await this.prisma.station.update({
@@ -113,5 +120,26 @@ export class StationsService {
       latitude: station.latitude?.toString() ?? null,
       longitude: station.longitude?.toString() ?? null
     };
+  }
+
+  private async ensureCodeIsUnique(code: string, excludeId?: string) {
+    const existingStation = await this.prisma.station.findFirst({
+      where: {
+        code,
+        ...(excludeId ? { id: { not: excludeId } } : {})
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (existingStation) {
+      throw new AppException(
+        'STATION_CODE_DUPLICATED',
+        'Mã ga đã tồn tại',
+        undefined,
+        [`Mã ga ${code} đã tồn tại`]
+      );
+    }
   }
 }

@@ -8,6 +8,7 @@ import { JwtService } from '@nestjs/jwt';
 import { RoleStatus, UserStatus, UserType } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes, createHash } from 'crypto';
+import { AppException } from '../../common/exceptions/app.exception';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { UsersService } from '../users/users.service';
 import { CreateRefreshTokenDto } from './dto/create-refresh-token.dto';
@@ -76,7 +77,12 @@ export class AuthService {
     const user = await this.findUserForLogin(dto.identifier);
 
     if (!user?.passwordHash || user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedException('Thông tin đăng nhập không hợp lệ');
+      throw new AppException(
+        'AUTH_INVALID_CREDENTIALS',
+        'Thông tin đăng nhập không hợp lệ',
+        401,
+        ['Email, số điện thoại hoặc mật khẩu không đúng']
+      );
     }
 
     const isPasswordValid = await bcrypt.compare(
@@ -85,7 +91,12 @@ export class AuthService {
     );
 
     if (!isPasswordValid) {
-      throw new UnauthorizedException('Thông tin đăng nhập không hợp lệ');
+      throw new AppException(
+        'AUTH_INVALID_CREDENTIALS',
+        'Thông tin đăng nhập không hợp lệ',
+        401,
+        ['Email, số điện thoại hoặc mật khẩu không đúng']
+      );
     }
 
     await this.usersService.updateLastLoginAt(user.id);
@@ -98,7 +109,12 @@ export class AuthService {
     const refreshToken = await this.findActiveRefreshToken(tokenHash);
 
     if (!refreshToken || refreshToken.user.status !== UserStatus.ACTIVE) {
-      throw new UnauthorizedException('Refresh token không hợp lệ');
+      throw new AppException(
+        'AUTH_TOKEN_EXPIRED',
+        'Phiên đăng nhập đã hết hạn',
+        401,
+        ['Refresh token không hợp lệ hoặc đã hết hạn']
+      );
     }
 
     await this.revokeRefreshToken(tokenHash);

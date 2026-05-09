@@ -1,5 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
+import { AppException } from '../../common/exceptions/app.exception';
 import { getPaginationOffset } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { CreateTrainDto } from './dto/create-train.dto';
@@ -33,6 +34,8 @@ export class TrainsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateTrainDto) {
+    await this.ensureCodeIsUnique(dto.code);
+
     await this.prisma.train.create({
       data: dto
     });
@@ -99,6 +102,10 @@ export class TrainsService {
   async update(id: string, dto: UpdateTrainDto) {
     await this.findById(id);
 
+    if (dto.code) {
+      await this.ensureCodeIsUnique(dto.code, id);
+    }
+
     await this.prisma.train.update({
       where: { id },
       data: dto
@@ -140,5 +147,26 @@ export class TrainsService {
     }
 
     return train;
+  }
+
+  private async ensureCodeIsUnique(code: string, excludeId?: string) {
+    const existingTrain = await this.prisma.train.findFirst({
+      where: {
+        code,
+        ...(excludeId ? { id: { not: excludeId } } : {})
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (existingTrain) {
+      throw new AppException(
+        'TRAIN_CODE_DUPLICATED',
+        'Mã tàu đã tồn tại',
+        undefined,
+        [`Mã tàu ${code} đã tồn tại`]
+      );
+    }
   }
 }

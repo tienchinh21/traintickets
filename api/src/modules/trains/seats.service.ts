@@ -1,9 +1,6 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CarriageType, Prisma, SeatTypeStatus } from '@prisma/client';
+import { AppException } from '../../common/exceptions/app.exception';
 import { getPaginationOffset } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { CreateSeatDto } from './dto/create-seat.dto';
@@ -34,6 +31,7 @@ export class SeatsService {
 
   async create(carriageId: string, dto: CreateSeatDto) {
     await this.ensureSeatTypeMatchesCarriage(carriageId, dto.seatTypeId);
+    await this.ensureSeatNumberIsUnique(carriageId, dto.seatNumber);
 
     await this.prisma.seat.create({
       data: {
@@ -121,6 +119,14 @@ export class SeatsService {
       );
     }
 
+    if (dto.seatNumber) {
+      await this.ensureSeatNumberIsUnique(
+        currentSeat.carriageId,
+        dto.seatNumber,
+        id
+      );
+    }
+
     await this.prisma.seat.update({
       where: { id },
       data: dto
@@ -159,7 +165,12 @@ export class SeatsService {
     });
 
     if (!carriage) {
-      throw new BadRequestException('Toa không tồn tại hoặc đã bị xóa mềm');
+      throw new AppException(
+        'CARRIAGE_NOT_FOUND',
+        'Toa không tồn tại hoặc đã bị xóa mềm',
+        undefined,
+        ['Toa không tồn tại hoặc đã bị xóa mềm']
+      );
     }
   }
 
@@ -179,7 +190,12 @@ export class SeatsService {
     });
 
     if (!carriage) {
-      throw new BadRequestException('Toa không tồn tại hoặc đã bị xóa mềm');
+      throw new AppException(
+        'CARRIAGE_NOT_FOUND',
+        'Toa không tồn tại hoặc đã bị xóa mềm',
+        undefined,
+        ['Toa không tồn tại hoặc đã bị xóa mềm']
+      );
     }
 
     const seatType = await this.prisma.seatType.findFirst({
@@ -195,7 +211,26 @@ export class SeatsService {
     });
 
     if (!seatType) {
-      throw new BadRequestException('Loại ghế không tồn tại hoặc không ACTIVE');
+      const inactiveSeatType = await this.prisma.seatType.findUnique({
+        where: {
+          id: seatTypeId
+        },
+        select: {
+          name: true,
+          status: true
+        }
+      });
+
+      throw new AppException(
+        'SEAT_TYPE_INACTIVE',
+        'Loại ghế không hoạt động',
+        undefined,
+        [
+          inactiveSeatType
+            ? `Loại ghế ${inactiveSeatType.name} không ACTIVE`
+            : 'Loại ghế không tồn tại hoặc không ACTIVE'
+        ]
+      );
     }
 
     const allowedCarriageTypes = this.parseAllowedCarriageTypes(
@@ -203,8 +238,13 @@ export class SeatsService {
     );
 
     if (!allowedCarriageTypes.includes(carriage.carriageType)) {
-      throw new BadRequestException(
-        `Loại ghế ${seatType.name} không phù hợp với ${this.getCarriageTypeLabel(carriage.carriageType)}`
+      throw new AppException(
+        'SEAT_TYPE_NOT_ALLOWED_FOR_CARRIAGE',
+        'Loại ghế không phù hợp với loại toa',
+        undefined,
+        [
+          `Loại ghế ${seatType.name} không phù hợp với ${this.getCarriageTypeLabel(carriage.carriageType)}`
+        ]
       );
     }
   }
@@ -226,6 +266,39 @@ export class SeatsService {
     }
 
     return seat;
+  }
+
+  private async ensureSeatNumberIsUnique(
+    carriageId: string,
+    seatNumber: string,
+    excludeId?: string
+  ) {
+    const existingSeat = await this.prisma.seat.findFirst({
+      where: {
+        carriageId,
+        seatNumber,
+        deletedAt: null,
+        ...(excludeId ? { id: { not: excludeId } } : {})
+      },
+      include: {
+        carriage: {
+          select: {
+            carriageNumber: true
+          }
+        }
+      }
+    });
+
+    if (existingSeat) {
+      throw new AppException(
+        'SEAT_NUMBER_DUPLICATED',
+        'Số ghế đã tồn tại',
+        undefined,
+        [
+          `Số ghế ${seatNumber} đã tồn tại trong toa ${existingSeat.carriage.carriageNumber}`
+        ]
+      );
+    }
   }
 
   private parseAllowedCarriageTypes(value: Prisma.JsonValue): CarriageType[] {

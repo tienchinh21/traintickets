@@ -4,6 +4,7 @@ import {
   NotFoundException
 } from '@nestjs/common';
 import { PermissionStatus, Prisma, RoleStatus } from '@prisma/client';
+import { AppException } from '../../common/exceptions/app.exception';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { SyncRolePermissionsDto } from './dto/sync-role-permissions.dto';
@@ -14,6 +15,8 @@ export class RolesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateRoleDto) {
+    await this.ensureCodeIsUnique(dto.code);
+
     await this.prisma.role.create({
       data: dto
     });
@@ -59,6 +62,10 @@ export class RolesService {
 
   async update(id: bigint, dto: UpdateRoleDto) {
     await this.findById(id);
+
+    if (dto.code) {
+      await this.ensureCodeIsUnique(dto.code, id);
+    }
 
     await this.prisma.role.update({
       where: { id },
@@ -126,5 +133,26 @@ export class RolesService {
     return {
       message: 'Cập nhật quyền cho vai trò thành công'
     };
+  }
+
+  private async ensureCodeIsUnique(code: string, excludeId?: bigint) {
+    const existingRole = await this.prisma.role.findFirst({
+      where: {
+        code,
+        ...(excludeId ? { id: { not: excludeId } } : {})
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (existingRole) {
+      throw new AppException(
+        'ROLE_CODE_DUPLICATED',
+        'Mã vai trò đã tồn tại',
+        undefined,
+        [`Mã vai trò ${code} đã tồn tại`]
+      );
+    }
   }
 }

@@ -7,6 +7,7 @@ import {
   MenuUnfoldOutlined,
   SolutionOutlined,
   SafetyCertificateOutlined,
+  ShareAltOutlined,
   TeamOutlined,
 } from '@ant-design/icons'
 import { Avatar, Button, Dropdown, Layout, Menu, Space, Typography } from 'antd'
@@ -37,6 +38,11 @@ const menuItems: MenuProps['items'] = [
         key: '/stations',
         icon: <EnvironmentOutlined />,
         label: 'Ga',
+      },
+      {
+        key: '/routes',
+        icon: <ShareAltOutlined />,
+        label: 'Tuyến',
       },
     ],
   },

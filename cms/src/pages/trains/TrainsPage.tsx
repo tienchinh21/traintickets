@@ -161,7 +161,12 @@ type CarriageFormModel = Omit<CarriageFormValues, 'seatMapLayout'> & {
 
 function parseLayout(value?: string) {
   if (!value?.trim()) return undefined
-  return JSON.parse(value) as Record<string, never>
+
+  try {
+    return JSON.parse(value) as Record<string, never>
+  } catch {
+    throw new Error('Sơ đồ ghế JSON không hợp lệ. Vui lòng kiểm tra dấu phẩy, dấu ngoặc và tên thuộc tính.')
+  }
 }
 
 export function TrainsPage() {

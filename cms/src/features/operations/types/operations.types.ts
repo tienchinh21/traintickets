@@ -99,3 +99,23 @@ export type SeatType = Record<string, unknown> & {
 
 export type SeatTypeFormValues = components['schemas']['CreateSeatTypeDto']
 export type UpdateSeatTypePayload = components['schemas']['UpdateSeatTypeDto']
+
+export type SeatStatus = 'ACTIVE' | 'BROKEN' | 'INACTIVE'
+
+export type Seat = Record<string, unknown> & {
+  id: string
+  carriageId: string
+  seatTypeId: string
+  seatNumber: string
+  rowNumber: number | null
+  columnNumber: number | null
+  floorNumber: number | null
+  status: SeatStatus
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+  seatType: SeatType
+}
+
+export type SeatFormValues = components['schemas']['CreateSeatDto']
+export type UpdateSeatPayload = components['schemas']['UpdateSeatDto']

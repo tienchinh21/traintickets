@@ -16,10 +16,13 @@ import {
 } from 'antd'
 import { useState } from 'react'
 import { operationsApi } from '@/features/operations/api/operationsApi'
+import {
+  carriageTypeOptions,
+  getCarriageTypeMeta,
+} from '@/features/operations/constants/carriage.constants'
 import type {
   Carriage,
   CarriageFormValues,
-  CarriageType,
   Seat,
   Train,
   TrainFormValues,
@@ -47,26 +50,10 @@ const carriageStatusMeta = {
   INACTIVE: { color: 'red', label: 'Tạm khóa' },
 }
 
-const carriageTypeOptions: Array<{ label: string; value: CarriageType }> = [
-  { label: 'Toa ghế ngồi', value: 'SEAT' },
-  { label: 'Toa giường nằm', value: 'SLEEPER' },
-  { label: 'Toa VIP', value: 'VIP' },
-]
-
-const carriageTypeMeta: Record<CarriageType, { color: string; label: string }> = {
-  SEAT: { color: 'blue', label: 'Toa ghế ngồi' },
-  SLEEPER: { color: 'purple', label: 'Toa giường nằm' },
-  VIP: { color: 'gold', label: 'Toa VIP' },
-}
-
 const seatStatusMeta = {
   ACTIVE: { color: 'green', label: 'Đang hoạt động' },
   BROKEN: { color: 'gold', label: 'Hỏng' },
   INACTIVE: { color: 'red', label: 'Tạm khóa' },
-}
-
-function getCarriageTypeMeta(type: string) {
-  return carriageTypeMeta[type as CarriageType] ?? { color: 'default', label: type }
 }
 
 const columns: ProColumns<Train>[] = [

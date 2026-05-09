@@ -523,7 +523,7 @@ export interface paths {
         put?: never;
         /**
          * Tạo ghế trong toa
-         * @description Tạo ghế thuộc toa. Toa phải tồn tại, chưa bị xóa mềm; loại ghế phải ACTIVE.
+         * @description Tạo ghế thuộc toa. Toa phải tồn tại, chưa bị xóa mềm; loại ghế phải ACTIVE và allowedCarriageTypes phải chứa carriageType của toa.
          */
         post: operations["SeatsController_create"];
         delete?: never;
@@ -555,7 +555,7 @@ export interface paths {
         head?: never;
         /**
          * Cập nhật ghế
-         * @description Cập nhật thông tin ghế. Nếu đổi seatTypeId thì loại ghế phải ACTIVE.
+         * @description Cập nhật thông tin ghế. Nếu đổi seatTypeId thì loại ghế phải ACTIVE và phù hợp với carriageType của toa.
          */
         patch: operations["SeatsController_update"];
         trace?: never;
@@ -998,6 +998,13 @@ export interface components {
              */
             baseMultiplier: number;
             /**
+             * @description Danh sách loại toa được phép dùng loại ghế này. FE dùng field này để lọc dropdown loại ghế theo toa.
+             * @example [
+             *       "SEAT"
+             *     ]
+             */
+            allowedCarriageTypes: ("SEAT" | "SLEEPER" | "VIP")[];
+            /**
              * @description Trạng thái loại ghế
              * @example ACTIVE
              * @enum {string}
@@ -1026,6 +1033,13 @@ export interface components {
              */
             baseMultiplier?: number;
             /**
+             * @description Danh sách loại toa được phép dùng loại ghế này. FE dùng field này để lọc dropdown loại ghế theo toa.
+             * @example [
+             *       "SEAT"
+             *     ]
+             */
+            allowedCarriageTypes?: ("SEAT" | "SLEEPER" | "VIP")[];
+            /**
              * @description Trạng thái loại ghế
              * @example ACTIVE
              * @enum {string}
@@ -1044,10 +1058,11 @@ export interface components {
              */
             name: string;
             /**
-             * @description Loại toa như SEAT, SLEEPER hoặc VIP
+             * @description Loại toa chính thức. SEAT: toa ghế ngồi, SLEEPER: toa giường nằm, VIP: toa VIP.
              * @example SEAT
+             * @enum {string}
              */
-            carriageType: string;
+            carriageType: "SEAT" | "SLEEPER" | "VIP";
             /**
              * @description JSON layout để client render sơ đồ ghế
              * @example {
@@ -1076,10 +1091,11 @@ export interface components {
              */
             name?: string;
             /**
-             * @description Loại toa như SEAT, SLEEPER hoặc VIP
+             * @description Loại toa chính thức. SEAT: toa ghế ngồi, SLEEPER: toa giường nằm, VIP: toa VIP.
              * @example SEAT
+             * @enum {string}
              */
-            carriageType?: string;
+            carriageType?: "SEAT" | "SLEEPER" | "VIP";
             /**
              * @description JSON layout để client render sơ đồ ghế
              * @example {
@@ -2705,6 +2721,13 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Dữ liệu không hợp lệ, ví dụ seatType không phù hợp với carriageType của toa. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
             /** @description Thiếu hoặc sai access token. */
             401: {
                 headers: {
@@ -2809,6 +2832,13 @@ export interface operations {
         responses: {
             /** @description Ghế đã được cập nhật. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Dữ liệu không hợp lệ, ví dụ seatType không phù hợp với carriageType của toa. */
+            400: {
                 headers: {
                     [name: string]: unknown;
                 };

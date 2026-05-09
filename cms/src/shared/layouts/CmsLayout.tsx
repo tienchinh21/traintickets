@@ -8,6 +8,7 @@ import {
   SolutionOutlined,
   SafetyCertificateOutlined,
   ShareAltOutlined,
+  TagsOutlined,
   TeamOutlined,
   TruckOutlined,
 } from '@ant-design/icons'
@@ -49,6 +50,11 @@ const menuItems: MenuProps['items'] = [
         key: '/trains',
         icon: <TruckOutlined />,
         label: 'Tàu',
+      },
+      {
+        key: '/seat-types',
+        icon: <TagsOutlined />,
+        label: 'Loại ghế',
       },
     ],
   },

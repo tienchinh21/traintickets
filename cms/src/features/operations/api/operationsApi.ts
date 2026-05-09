@@ -5,11 +5,14 @@ import type {
   Route,
   RouteDetail,
   RouteFormValues,
+  SeatType,
+  SeatTypeFormValues,
   Station,
   StationFormValues,
   Train,
   TrainFormValues,
   UpdateRoutePayload,
+  UpdateSeatTypePayload,
   UpdateStationPayload,
   UpdateTrainPayload,
 } from '../types/operations.types'
@@ -82,6 +85,26 @@ export const operationsApi = {
 
   async getTrainCarriages(trainId: string) {
     const response = await http.get<ApiSuccess<Carriage[]>>(`/trains/${trainId}/carriages`)
+    return response.data
+  },
+
+  async getSeatTypes() {
+    const response = await http.get<ApiSuccess<SeatType[]>>('/seat-types')
+    return response.data
+  },
+
+  async createSeatType(payload: SeatTypeFormValues) {
+    const response = await http.post<ApiSuccess<SeatType>>('/seat-types', payload)
+    return response.data
+  },
+
+  async updateSeatType(id: string, payload: UpdateSeatTypePayload) {
+    const response = await http.patch<ApiSuccess<SeatType>>(`/seat-types/${id}`, payload)
+    return response.data
+  },
+
+  async deleteSeatType(id: string) {
+    const response = await http.delete<ApiSuccess<SeatType>>(`/seat-types/${id}`)
     return response.data
   },
 }

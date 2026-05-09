@@ -82,3 +82,17 @@ export type Carriage = Record<string, unknown> & {
   updatedAt: string
   deletedAt: string | null
 }
+
+export type SeatType = Record<string, unknown> & {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  baseMultiplier: string | number
+  status: EntityStatus
+  createdAt: string
+  updatedAt: string
+}
+
+export type SeatTypeFormValues = components['schemas']['CreateSeatTypeDto']
+export type UpdateSeatTypePayload = components['schemas']['UpdateSeatTypeDto']

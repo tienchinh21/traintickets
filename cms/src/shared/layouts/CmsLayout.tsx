@@ -11,8 +11,6 @@ import {
   TagsOutlined,
   TeamOutlined,
   TruckOutlined,
-  AppstoreOutlined,
-  BorderOutlined,
 } from '@ant-design/icons'
 import { Avatar, Button, Dropdown, Layout, Menu, Space, Typography } from 'antd'
 import type { MenuProps } from 'antd'
@@ -57,16 +55,6 @@ const menuItems: MenuProps['items'] = [
         key: '/seat-types',
         icon: <TagsOutlined />,
         label: 'Loại ghế',
-      },
-      {
-        key: '/carriages',
-        icon: <AppstoreOutlined />,
-        label: 'Toa',
-      },
-      {
-        key: '/seats',
-        icon: <BorderOutlined />,
-        label: 'Ghế',
       },
     ],
   },

@@ -1,9 +1,9 @@
-import { ApartmentOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App as AntApp, Button, Card, Drawer, Form, Input, Modal, Select, Tag } from 'antd'
+import { App as AntApp, Button, Card, Drawer, Form, Input, Modal, Select, Space, Tag, Typography } from 'antd'
 import { useState } from 'react'
 import { operationsApi } from '@/features/operations/api/operationsApi'
-import type { Carriage, Train, TrainFormValues } from '@/features/operations/types/operations.types'
+import type { Carriage, Seat, Train, TrainFormValues } from '@/features/operations/types/operations.types'
 import { getApiErrorMessage } from '@/shared/api/errors'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { CoreTable, createActionColumn } from '@/shared/components/table'
@@ -24,6 +24,12 @@ const trainStatusMeta = {
 const carriageStatusMeta = {
   ACTIVE: { color: 'green', label: 'Đang hoạt động' },
   MAINTENANCE: { color: 'gold', label: 'Bảo trì' },
+  INACTIVE: { color: 'red', label: 'Tạm khóa' },
+}
+
+const seatStatusMeta = {
+  ACTIVE: { color: 'green', label: 'Đang hoạt động' },
+  BROKEN: { color: 'gold', label: 'Hỏng' },
   INACTIVE: { color: 'red', label: 'Tạm khóa' },
 }
 
@@ -96,12 +102,40 @@ const carriageColumns: ProColumns<Carriage>[] = [
   },
 ]
 
+const seatColumns: ProColumns<Seat>[] = [
+  {
+    title: 'Số ghế',
+    dataIndex: 'seatNumber',
+    width: 120,
+    render: (_, record) => <span className="table-code">{record.seatNumber}</span>,
+  },
+  {
+    title: 'Loại ghế',
+    dataIndex: 'seatType',
+    width: 220,
+    render: (_, record) => `${record.seatType.code} - ${record.seatType.name}`,
+  },
+  { title: 'Dòng', dataIndex: 'rowNumber', width: 100, render: (_, record) => record.rowNumber ?? '-' },
+  { title: 'Cột', dataIndex: 'columnNumber', width: 100, render: (_, record) => record.columnNumber ?? '-' },
+  { title: 'Tầng', dataIndex: 'floorNumber', width: 100, render: (_, record) => record.floorNumber ?? '-' },
+  {
+    title: 'Trạng thái',
+    dataIndex: 'status',
+    width: 150,
+    render: (_, record) => {
+      const meta = seatStatusMeta[record.status]
+      return <Tag color={meta.color}>{meta.label}</Tag>
+    },
+  },
+]
+
 export function TrainsPage() {
   const { message, modal } = AntApp.useApp()
   const queryClient = useQueryClient()
   const [form] = Form.useForm<TrainFormValues>()
   const [editingTrain, setEditingTrain] = useState<Train | null>(null)
-  const [carriageTrain, setCarriageTrain] = useState<Train | null>(null)
+  const [detailTrain, setDetailTrain] = useState<Train | null>(null)
+  const [selectedCarriage, setSelectedCarriage] = useState<Carriage | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
 
   const trainsQuery = useQuery({
@@ -110,9 +144,15 @@ export function TrainsPage() {
   })
 
   const carriagesQuery = useQuery({
-    queryKey: ['trains', carriageTrain?.id, 'carriages'],
-    enabled: Boolean(carriageTrain),
-    queryFn: async () => (await operationsApi.getTrainCarriages(carriageTrain?.id ?? '')).data,
+    queryKey: ['trains', detailTrain?.id, 'carriages'],
+    enabled: Boolean(detailTrain),
+    queryFn: async () => (await operationsApi.getTrainCarriages(detailTrain?.id ?? '')).data,
+  })
+
+  const seatsQuery = useQuery({
+    queryKey: ['carriages', selectedCarriage?.id, 'seats'],
+    enabled: Boolean(selectedCarriage),
+    queryFn: async () => (await operationsApi.getSeats(selectedCarriage?.id ?? '')).data,
   })
 
   const saveTrainMutation = useMutation({
@@ -172,10 +212,13 @@ export function TrainsPage() {
 
   const actionColumn = createActionColumn<Train>((record) => [
     {
-      key: 'carriages',
+      key: 'detail',
       icon: <ApartmentOutlined />,
-      tooltip: 'Xem toa của tàu',
-      onClick: () => setCarriageTrain(record),
+      tooltip: 'Chi tiết tàu',
+      onClick: () => {
+        setDetailTrain(record)
+        setSelectedCarriage(null)
+      },
     },
     {
       key: 'edit',
@@ -191,6 +234,15 @@ export function TrainsPage() {
       onClick: () => confirmDelete(record),
     },
   ], 136)
+
+  const carriageActionColumn = createActionColumn<Carriage>((record) => [
+    {
+      key: 'seats',
+      icon: <EyeOutlined />,
+      tooltip: 'Xem ghế trong toa',
+      onClick: () => setSelectedCarriage(record),
+    },
+  ], 72)
 
   return (
     <>
@@ -246,18 +298,54 @@ export function TrainsPage() {
       </Modal>
 
       <Drawer
-        title={carriageTrain ? `Toa của ${carriageTrain.name}` : 'Toa của tàu'}
-        open={Boolean(carriageTrain)}
-        width={820}
-        onClose={() => setCarriageTrain(null)}
+        title={detailTrain ? `Chi tiết ${detailTrain.name}` : 'Chi tiết tàu'}
+        open={Boolean(detailTrain)}
+        width={980}
+        onClose={() => {
+          setDetailTrain(null)
+          setSelectedCarriage(null)
+        }}
       >
+        {detailTrain && (
+          <div className="train-detail-summary">
+            <Space direction="vertical" size={2}>
+              <Typography.Text type="secondary">Mã tàu</Typography.Text>
+              <span className="table-code">{detailTrain.code}</span>
+            </Space>
+            <Space direction="vertical" size={2}>
+              <Typography.Text type="secondary">Tên tàu</Typography.Text>
+              <Typography.Text strong>{detailTrain.name}</Typography.Text>
+            </Space>
+            <Space direction="vertical" size={2}>
+              <Typography.Text type="secondary">Trạng thái</Typography.Text>
+              <Tag color={trainStatusMeta[detailTrain.status].color}>
+                {trainStatusMeta[detailTrain.status].label}
+              </Tag>
+            </Space>
+          </div>
+        )}
+
         <CoreTable<Carriage>
-          columns={carriageColumns}
+          columns={[...carriageColumns, carriageActionColumn]}
           dataSource={carriagesQuery.data ?? []}
           loading={carriagesQuery.isLoading}
           pagination={false}
           toolBarRender={false}
+          headerTitle="Danh sách toa"
         />
+
+        {selectedCarriage && (
+          <div className="train-detail-seats">
+            <CoreTable<Seat>
+              columns={seatColumns}
+              dataSource={seatsQuery.data ?? []}
+              headerTitle={`Ghế trong ${selectedCarriage.name}`}
+              loading={seatsQuery.isLoading}
+              pagination={false}
+              toolBarRender={false}
+            />
+          </div>
+        )}
       </Drawer>
     </>
   )

@@ -127,8 +127,9 @@ jobs:
             exit 0
           fi
 
-          MESSAGE=$(printf '%s\n\nRepo: %s\nBranch: %s\nCommit: %s\nActor: %s\nRun: %s' \
-            "API deploy thanh cong" \
+          MESSAGE=$(printf '%s\n\nDịch vụ: %s\nRepo: %s\nNhánh: %s\nCommit: %s\nNgười deploy: %s\nChi tiết: %s' \
+            "Triển khai API thành công" \
+            "API" \
             "${{ github.repository }}" \
             "${{ github.ref_name }}" \
             "${{ github.sha }}" \

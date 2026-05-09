@@ -3,6 +3,8 @@ import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
 import { NotFoundPage } from '@/pages/not-found/NotFoundPage'
+import { PermissionsPage } from '@/pages/permissions/PermissionsPage'
+import { RolesPage } from '@/pages/roles/RolesPage'
 import { UsersPage } from '@/pages/users/UsersPage'
 import { CmsLayout } from '@/shared/layouts/CmsLayout'
 
@@ -16,6 +18,8 @@ export function AppRouter() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="/dashboard" element={<DashboardPage />} />
             <Route path="/users" element={<UsersPage />} />
+            <Route path="/roles" element={<RolesPage />} />
+            <Route path="/permissions" element={<PermissionsPage />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFoundPage />} />

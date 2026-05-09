@@ -185,6 +185,10 @@ a {
   text-transform: uppercase;
 }
 
+.full-width-input {
+  width: 100%;
+}
+
 .page-header {
   display: flex;
   align-items: flex-start;

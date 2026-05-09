@@ -1,5 +1,6 @@
 import {
   DashboardOutlined,
+  EnvironmentOutlined,
   KeyOutlined,
   LogoutOutlined,
   MenuFoldOutlined,
@@ -26,6 +27,18 @@ const menuItems: MenuProps['items'] = [
     key: '/users',
     icon: <TeamOutlined />,
     label: 'Người dùng',
+  },
+  {
+    key: 'operations',
+    icon: <EnvironmentOutlined />,
+    label: 'Vận hành',
+    children: [
+      {
+        key: '/stations',
+        icon: <EnvironmentOutlined />,
+        label: 'Ga',
+      },
+    ],
   },
   {
     key: 'access-control',
@@ -76,7 +89,7 @@ export function CmsLayout() {
           theme="dark"
           mode="inline"
           selectedKeys={[location.pathname]}
-          defaultOpenKeys={['access-control']}
+          defaultOpenKeys={['operations', 'access-control']}
           items={menuItems}
           onClick={({ key }) => {
             if (key.startsWith('/')) {

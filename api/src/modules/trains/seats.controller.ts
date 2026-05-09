@@ -11,6 +11,7 @@ import {
   UseGuards
 } from '@nestjs/common';
 import {
+  ApiBadRequestResponse,
   ApiBearerAuth,
   ApiBody,
   ApiForbiddenResponse,
@@ -42,7 +43,7 @@ export class SeatsController {
   @ApiOperation({
     summary: 'Tạo ghế trong toa',
     description:
-      'Tạo ghế thuộc toa. Toa phải tồn tại, chưa bị xóa mềm; loại ghế phải ACTIVE.'
+      'Tạo ghế thuộc toa. Toa phải tồn tại, chưa bị xóa mềm; loại ghế phải ACTIVE và allowedCarriageTypes phải chứa carriageType của toa.'
   })
   @ApiParam({
     name: 'carriageId',
@@ -51,6 +52,10 @@ export class SeatsController {
   })
   @ApiBody({ type: CreateSeatDto })
   @ApiOkResponse({ description: 'Ghế đã được tạo.' })
+  @ApiBadRequestResponse({
+    description:
+      'Dữ liệu không hợp lệ, ví dụ seatType không phù hợp với carriageType của toa.'
+  })
   @ApiUnauthorizedResponse({ description: 'Thiếu hoặc sai access token.' })
   @ApiForbiddenResponse({
     description: 'User không có permission SEATS_CREATE.'
@@ -117,7 +122,7 @@ export class SeatsController {
   @ApiOperation({
     summary: 'Cập nhật ghế',
     description:
-      'Cập nhật thông tin ghế. Nếu đổi seatTypeId thì loại ghế phải ACTIVE.'
+      'Cập nhật thông tin ghế. Nếu đổi seatTypeId thì loại ghế phải ACTIVE và phù hợp với carriageType của toa.'
   })
   @ApiParam({
     name: 'id',
@@ -126,6 +131,10 @@ export class SeatsController {
   })
   @ApiBody({ type: UpdateSeatDto })
   @ApiOkResponse({ description: 'Ghế đã được cập nhật.' })
+  @ApiBadRequestResponse({
+    description:
+      'Dữ liệu không hợp lệ, ví dụ seatType không phù hợp với carriageType của toa.'
+  })
   @ApiUnauthorizedResponse({ description: 'Thiếu hoặc sai access token.' })
   @ApiForbiddenResponse({
     description: 'User không có permission SEATS_UPDATE.'

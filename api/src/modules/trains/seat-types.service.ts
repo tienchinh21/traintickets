@@ -16,7 +16,14 @@ export class SeatTypesService {
 
   async create(dto: CreateSeatTypeDto) {
     await this.prisma.seatType.create({
-      data: dto
+      data: {
+        code: dto.code,
+        name: dto.name,
+        description: dto.description,
+        baseMultiplier: dto.baseMultiplier,
+        allowedCarriageTypes: dto.allowedCarriageTypes,
+        status: dto.status
+      }
     });
 
     return {
@@ -78,7 +85,14 @@ export class SeatTypesService {
 
     await this.prisma.seatType.update({
       where: { id },
-      data: dto
+      data: {
+        code: dto.code,
+        name: dto.name,
+        description: dto.description,
+        baseMultiplier: dto.baseMultiplier,
+        allowedCarriageTypes: dto.allowedCarriageTypes,
+        status: dto.status
+      }
     });
 
     return {
@@ -104,7 +118,8 @@ export class SeatTypesService {
   private serializeSeatType(seatType: NonNullable<SeatTypeRecord>) {
     return {
       ...seatType,
-      baseMultiplier: seatType.baseMultiplier.toString()
+      baseMultiplier: seatType.baseMultiplier.toString(),
+      allowedCarriageTypes: seatType.allowedCarriageTypes
     };
   }
 }

@@ -1,7 +1,9 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { SeatTypeStatus } from '@prisma/client';
+import { CarriageType, SeatTypeStatus } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
+  ArrayNotEmpty,
+  IsArray,
   IsEnum,
   IsNumber,
   IsOptional,
@@ -52,6 +54,18 @@ export class CreateSeatTypeDto {
   @IsNumber({ maxDecimalPlaces: 2 })
   @Min(0.01)
   baseMultiplier!: number;
+
+  @ApiProperty({
+    enum: CarriageType,
+    isArray: true,
+    example: [CarriageType.SEAT],
+    description:
+      'Danh sách loại toa được phép dùng loại ghế này. FE dùng field này để lọc dropdown loại ghế theo toa.'
+  })
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsEnum(CarriageType, { each: true })
+  allowedCarriageTypes!: CarriageType[];
 
   @ApiProperty({
     enum: SeatTypeStatus,

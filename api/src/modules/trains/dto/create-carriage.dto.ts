@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { CarriageStatus } from '@prisma/client';
+import { CarriageStatus, CarriageType } from '@prisma/client';
 import { Type } from 'class-transformer';
 import {
   IsEnum,
@@ -33,13 +33,13 @@ export class CreateCarriageDto {
   name!: string;
 
   @ApiProperty({
-    example: 'SEAT',
-    maxLength: 50,
-    description: 'Loại toa như SEAT, SLEEPER hoặc VIP'
+    enum: CarriageType,
+    example: CarriageType.SEAT,
+    description:
+      'Loại toa chính thức. SEAT: toa ghế ngồi, SLEEPER: toa giường nằm, VIP: toa VIP.'
   })
-  @IsString()
-  @MaxLength(50)
-  carriageType!: string;
+  @IsEnum(CarriageType)
+  carriageType!: CarriageType;
 
   @ApiPropertyOptional({
     example: { rows: 10, columns: 4, aisleAfterColumn: 2 },

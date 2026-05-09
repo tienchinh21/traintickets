@@ -50,6 +50,12 @@ enum SeatTypeStatus {
   INACTIVE
 }
 
+enum CarriageType {
+  SEAT
+  SLEEPER
+  VIP
+}
+
 enum CarriageStatus {
   ACTIVE
   MAINTENANCE
@@ -265,14 +271,15 @@ model Train {
 }
 
 model SeatType {
-  id             String         @id @default(uuid()) @db.Char(36)
-  code           String         @unique @db.VarChar(30)
-  name           String         @db.VarChar(100)
-  description    String?        @db.VarChar(500)
-  baseMultiplier Decimal        @map("base_multiplier") @db.Decimal(5, 2)
-  status         SeatTypeStatus
-  createdAt      DateTime       @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt      DateTime       @updatedAt @map("updated_at") @db.DateTime(3)
+  id                    String         @id @default(uuid()) @db.Char(36)
+  code                  String         @unique @db.VarChar(30)
+  name                  String         @db.VarChar(100)
+  description           String?        @db.VarChar(500)
+  baseMultiplier        Decimal        @map("base_multiplier") @db.Decimal(5, 2)
+  allowedCarriageTypes  Json           @map("allowed_carriage_types")
+  status                SeatTypeStatus
+  createdAt             DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt             DateTime       @updatedAt @map("updated_at") @db.DateTime(3)
 
   seats Seat[]
 
@@ -285,7 +292,7 @@ model Carriage {
   trainId         String         @map("train_id") @db.Char(36)
   carriageNumber  Int            @map("carriage_number") @db.UnsignedInt
   name            String         @db.VarChar(100)
-  carriageType    String         @map("carriage_type") @db.VarChar(50)
+  carriageType    CarriageType   @map("carriage_type")
   seatMapLayout   Json?          @map("seat_map_layout")
   status          CarriageStatus
   createdAt       DateTime       @default(now()) @map("created_at") @db.DateTime(3)

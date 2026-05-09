@@ -3,7 +3,7 @@ import {
   Injectable,
   NotFoundException
 } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { CarriageType, Prisma } from '@prisma/client';
 import { getPaginationOffset } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { CarriageQueryDto } from './dto/carriage-query.dto';
@@ -64,6 +64,7 @@ export class CarriagesService {
 
     const page = query.page ?? 1;
     const limit = query.limit ?? 20;
+    const searchCarriageType = this.parseCarriageType(query.search);
     const where: Prisma.CarriageWhereInput = {
       trainId,
       deletedAt: null,
@@ -72,7 +73,9 @@ export class CarriagesService {
         ? {
             OR: [
               { name: { contains: query.search } },
-              { carriageType: { contains: query.search } }
+              ...(searchCarriageType
+                ? [{ carriageType: searchCarriageType }]
+                : [])
             ]
           }
         : {})
@@ -119,6 +122,10 @@ export class CarriagesService {
   async update(id: string, dto: UpdateCarriageDto) {
     await this.findById(id);
 
+    if (dto.carriageType) {
+      await this.ensureExistingSeatsMatchCarriageType(id, dto.carriageType);
+    }
+
     await this.prisma.carriage.update({
       where: { id },
       data: {
@@ -164,6 +171,65 @@ export class CarriagesService {
     if (!train) {
       throw new BadRequestException('Tàu không tồn tại hoặc đã bị xóa mềm');
     }
+  }
+
+  private async ensureExistingSeatsMatchCarriageType(
+    carriageId: string,
+    carriageType: CarriageType
+  ) {
+    const seats = await this.prisma.seat.findMany({
+      where: {
+        carriageId,
+        deletedAt: null
+      },
+      include: {
+        seatType: true
+      }
+    });
+
+    const invalidSeat = seats.find(
+      (seat) =>
+        !this.parseAllowedCarriageTypes(
+          seat.seatType.allowedCarriageTypes
+        ).includes(carriageType)
+    );
+
+    if (invalidSeat) {
+      throw new BadRequestException(
+        `Không thể đổi toa sang ${this.getCarriageTypeLabel(carriageType)} vì đang có loại ghế ${invalidSeat.seatType.name} không phù hợp`
+      );
+    }
+  }
+
+  private parseAllowedCarriageTypes(value: Prisma.JsonValue): CarriageType[] {
+    if (!Array.isArray(value)) {
+      return [];
+    }
+
+    return value.filter((item): item is CarriageType =>
+      Object.values(CarriageType).includes(item as CarriageType)
+    );
+  }
+
+  private parseCarriageType(value?: string): CarriageType | undefined {
+    if (!value) {
+      return undefined;
+    }
+
+    const normalizedValue = value.toUpperCase();
+    return Object.values(CarriageType).find(
+      (carriageType) => carriageType === normalizedValue
+    );
+  }
+
+  private getCarriageTypeLabel(carriageType: CarriageType) {
+    const labels: Record<CarriageType, string> = {
+      [CarriageType.SEAT]: 'toa ghế ngồi',
+      [CarriageType.SLEEPER]: 'toa giường nằm',
+      [CarriageType.VIP]: 'toa VIP'
+    };
+
+    return labels[carriageType];
   }
 
   private serializeCarriageDetail(carriage: CarriageWithDetail) {

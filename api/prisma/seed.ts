@@ -1,5 +1,6 @@
 import {
   CarriageStatus,
+  CarriageType,
   PermissionStatus,
   PrismaClient,
   RouteStatus,
@@ -444,19 +445,22 @@ async function main() {
       code: 'HARD_SEAT',
       name: 'Ghế cứng',
       description: 'Ghế cứng tiêu chuẩn.',
-      baseMultiplier: 1
+      baseMultiplier: 1,
+      allowedCarriageTypes: [CarriageType.SEAT]
     },
     {
       code: 'SOFT_SEAT',
       name: 'Ghế mềm',
       description: 'Ghế mềm điều hòa.',
-      baseMultiplier: 1.2
+      baseMultiplier: 1.2,
+      allowedCarriageTypes: [CarriageType.SEAT]
     },
     {
       code: 'SLEEPER_4',
       name: 'Giường nằm khoang 4',
       description: 'Giường nằm khoang 4 điều hòa.',
-      baseMultiplier: 1.8
+      baseMultiplier: 1.8,
+      allowedCarriageTypes: [CarriageType.SLEEPER, CarriageType.VIP]
     }
   ];
 
@@ -506,7 +510,7 @@ async function main() {
     },
     update: {
       name: 'Toa 1 ghế ngồi',
-      carriageType: 'SEAT',
+      carriageType: CarriageType.SEAT,
       seatMapLayout: { rows: 2, columns: 2 },
       status: CarriageStatus.ACTIVE,
       deletedAt: null
@@ -515,7 +519,7 @@ async function main() {
       trainId: train.id,
       carriageNumber: 1,
       name: 'Toa 1 ghế ngồi',
-      carriageType: 'SEAT',
+      carriageType: CarriageType.SEAT,
       seatMapLayout: { rows: 2, columns: 2 },
       status: CarriageStatus.ACTIVE
     }
@@ -530,7 +534,7 @@ async function main() {
     },
     update: {
       name: 'Toa 2 giường nằm',
-      carriageType: 'SLEEPER',
+      carriageType: CarriageType.SLEEPER,
       seatMapLayout: { rooms: 1, bedsPerRoom: 4 },
       status: CarriageStatus.ACTIVE,
       deletedAt: null
@@ -539,7 +543,7 @@ async function main() {
       trainId: train.id,
       carriageNumber: 2,
       name: 'Toa 2 giường nằm',
-      carriageType: 'SLEEPER',
+      carriageType: CarriageType.SLEEPER,
       seatMapLayout: { rooms: 1, bedsPerRoom: 4 },
       status: CarriageStatus.ACTIVE
     }

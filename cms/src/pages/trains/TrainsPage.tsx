@@ -1,9 +1,28 @@
 import { ApartmentOutlined, DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App as AntApp, Button, Card, Drawer, Form, Input, Modal, Select, Space, Tag, Typography } from 'antd'
+import {
+  App as AntApp,
+  Button,
+  Card,
+  Drawer,
+  Form,
+  Input,
+  InputNumber,
+  Modal,
+  Select,
+  Space,
+  Tag,
+  Typography,
+} from 'antd'
 import { useState } from 'react'
 import { operationsApi } from '@/features/operations/api/operationsApi'
-import type { Carriage, Seat, Train, TrainFormValues } from '@/features/operations/types/operations.types'
+import type {
+  Carriage,
+  CarriageFormValues,
+  Seat,
+  Train,
+  TrainFormValues,
+} from '@/features/operations/types/operations.types'
 import { getApiErrorMessage } from '@/shared/api/errors'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { CoreTable, createActionColumn } from '@/shared/components/table'
@@ -129,14 +148,26 @@ const seatColumns: ProColumns<Seat>[] = [
   },
 ]
 
+type CarriageFormModel = Omit<CarriageFormValues, 'seatMapLayout'> & {
+  seatMapLayout?: string
+}
+
+function parseLayout(value?: string) {
+  if (!value?.trim()) return undefined
+  return JSON.parse(value) as Record<string, never>
+}
+
 export function TrainsPage() {
   const { message, modal } = AntApp.useApp()
   const queryClient = useQueryClient()
   const [form] = Form.useForm<TrainFormValues>()
+  const [carriageForm] = Form.useForm<CarriageFormModel>()
   const [editingTrain, setEditingTrain] = useState<Train | null>(null)
+  const [editingCarriage, setEditingCarriage] = useState<Carriage | null>(null)
   const [detailTrain, setDetailTrain] = useState<Train | null>(null)
   const [selectedCarriage, setSelectedCarriage] = useState<Carriage | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [isCarriageFormOpen, setIsCarriageFormOpen] = useState(false)
 
   const trainsQuery = useQuery({
     queryKey: ['trains'],
@@ -182,6 +213,39 @@ export function TrainsPage() {
     onError: (error) => message.error(getApiErrorMessage(error, 'Xóa tàu thất bại')),
   })
 
+  const saveCarriageMutation = useMutation({
+    mutationFn: async (values: CarriageFormModel) => {
+      const payload: CarriageFormValues = {
+        ...values,
+        seatMapLayout: parseLayout(values.seatMapLayout),
+      }
+
+      if (editingCarriage) {
+        return operationsApi.updateCarriage(editingCarriage.id, payload)
+      }
+
+      return operationsApi.createCarriage(detailTrain?.id ?? '', payload)
+    },
+    onSuccess: async (response) => {
+      message.success(response.message)
+      setIsCarriageFormOpen(false)
+      setEditingCarriage(null)
+      carriageForm.resetFields()
+      await queryClient.invalidateQueries({ queryKey: ['trains', detailTrain?.id, 'carriages'] })
+    },
+    onError: (error) => message.error(getApiErrorMessage(error, 'Lưu toa thất bại')),
+  })
+
+  const deleteCarriageMutation = useMutation({
+    mutationFn: operationsApi.deleteCarriage,
+    onSuccess: async (response) => {
+      message.success(response.message)
+      setSelectedCarriage(null)
+      await queryClient.invalidateQueries({ queryKey: ['trains', detailTrain?.id, 'carriages'] })
+    },
+    onError: (error) => message.error(getApiErrorMessage(error, 'Xóa toa thất bại')),
+  })
+
   const openCreateForm = () => {
     setEditingTrain(null)
     form.setFieldsValue({ status: 'ACTIVE' } as TrainFormValues)
@@ -207,6 +271,35 @@ export function TrainsPage() {
       okButtonProps: { danger: true },
       cancelText: 'Hủy',
       onOk: () => deleteTrainMutation.mutateAsync(train.id),
+    })
+  }
+
+  const openCreateCarriageForm = () => {
+    setEditingCarriage(null)
+    carriageForm.setFieldsValue({ status: 'ACTIVE', carriageType: 'SEAT' } as CarriageFormModel)
+    setIsCarriageFormOpen(true)
+  }
+
+  const openEditCarriageForm = (carriage: Carriage) => {
+    setEditingCarriage(carriage)
+    carriageForm.setFieldsValue({
+      carriageNumber: carriage.carriageNumber,
+      name: carriage.name,
+      carriageType: carriage.carriageType,
+      seatMapLayout: carriage.seatMapLayout ? JSON.stringify(carriage.seatMapLayout, null, 2) : undefined,
+      status: carriage.status,
+    })
+    setIsCarriageFormOpen(true)
+  }
+
+  const confirmDeleteCarriage = (carriage: Carriage) => {
+    modal.confirm({
+      title: 'Xóa mềm toa?',
+      content: `Toa ${carriage.name} sẽ không còn dùng cho dữ liệu mới.`,
+      okText: 'Xóa toa',
+      okButtonProps: { danger: true },
+      cancelText: 'Hủy',
+      onOk: () => deleteCarriageMutation.mutateAsync(carriage.id),
     })
   }
 
@@ -242,7 +335,20 @@ export function TrainsPage() {
       tooltip: 'Xem ghế trong toa',
       onClick: () => setSelectedCarriage(record),
     },
-  ], 72)
+    {
+      key: 'edit',
+      icon: <EditOutlined />,
+      tooltip: 'Sửa toa',
+      onClick: () => openEditCarriageForm(record),
+    },
+    {
+      key: 'delete',
+      icon: <DeleteOutlined />,
+      tooltip: 'Xóa mềm toa',
+      danger: true,
+      onClick: () => confirmDeleteCarriage(record),
+    },
+  ], 136)
 
   return (
     <>
@@ -330,8 +436,17 @@ export function TrainsPage() {
           dataSource={carriagesQuery.data ?? []}
           loading={carriagesQuery.isLoading}
           pagination={false}
-          toolBarRender={false}
           headerTitle="Danh sách toa"
+          toolBarRender={() => [
+            <Button
+              key="create-carriage"
+              type="primary"
+              icon={<PlusOutlined />}
+              onClick={openCreateCarriageForm}
+            >
+              Thêm toa
+            </Button>,
+          ]}
         />
 
         {selectedCarriage && (
@@ -347,6 +462,42 @@ export function TrainsPage() {
           </div>
         )}
       </Drawer>
+
+      <Modal
+        title={editingCarriage ? 'Sửa toa' : 'Thêm toa'}
+        open={isCarriageFormOpen}
+        okText={editingCarriage ? 'Lưu thay đổi' : 'Tạo toa'}
+        cancelText="Hủy"
+        confirmLoading={saveCarriageMutation.isPending}
+        onCancel={() => {
+          setIsCarriageFormOpen(false)
+          setEditingCarriage(null)
+          carriageForm.resetFields()
+        }}
+        onOk={() => carriageForm.submit()}
+      >
+        <Form<CarriageFormModel>
+          form={carriageForm}
+          layout="vertical"
+          onFinish={(values) => saveCarriageMutation.mutate(values)}
+        >
+          <Form.Item label="Số toa" name="carriageNumber" rules={[{ required: true, message: 'Vui lòng nhập số toa' }]}>
+            <InputNumber className="full-width-input" min={1} />
+          </Form.Item>
+          <Form.Item label="Tên toa" name="name" rules={[{ required: true, message: 'Vui lòng nhập tên toa' }]}>
+            <Input placeholder="Toa 1 ghế ngồi" />
+          </Form.Item>
+          <Form.Item label="Loại toa" name="carriageType" rules={[{ required: true, message: 'Vui lòng nhập loại toa' }]}>
+            <Input placeholder="SEAT" />
+          </Form.Item>
+          <Form.Item label="Seat map layout JSON" name="seatMapLayout">
+            <Input.TextArea rows={4} placeholder='{"rows":10,"columns":4}' />
+          </Form.Item>
+          <Form.Item label="Trạng thái" name="status" rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}>
+            <Select options={statusOptions} />
+          </Form.Item>
+        </Form>
+      </Modal>
     </>
   )
 }

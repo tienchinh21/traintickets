@@ -2,6 +2,7 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
+import { CarriagesPage } from '@/pages/carriages/CarriagesPage'
 import { NotFoundPage } from '@/pages/not-found/NotFoundPage'
 import { PermissionsPage } from '@/pages/permissions/PermissionsPage'
 import { RolesPage } from '@/pages/roles/RolesPage'
@@ -28,6 +29,7 @@ export function AppRouter() {
             <Route path="/routes" element={<RoutesPage />} />
             <Route path="/trains" element={<TrainsPage />} />
             <Route path="/seat-types" element={<SeatTypesPage />} />
+            <Route path="/carriages" element={<CarriagesPage />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFoundPage />} />

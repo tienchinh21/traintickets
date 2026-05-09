@@ -69,13 +69,14 @@ export type TrainFormValues = components['schemas']['CreateTrainDto']
 export type UpdateTrainPayload = components['schemas']['UpdateTrainDto']
 
 export type CarriageStatus = 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE'
+export type CarriageType = 'SEAT' | 'SLEEPER' | 'VIP'
 
 export type Carriage = Record<string, unknown> & {
   id: string
   trainId: string
   carriageNumber: number
   name: string
-  carriageType: string
+  carriageType: CarriageType
   seatMapLayout: Record<string, unknown> | null
   status: CarriageStatus
   createdAt: string

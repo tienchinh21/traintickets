@@ -19,6 +19,7 @@ import { operationsApi } from '@/features/operations/api/operationsApi'
 import type {
   Carriage,
   CarriageFormValues,
+  CarriageType,
   Seat,
   Train,
   TrainFormValues,
@@ -46,10 +47,26 @@ const carriageStatusMeta = {
   INACTIVE: { color: 'red', label: 'Tạm khóa' },
 }
 
+const carriageTypeOptions: Array<{ label: string; value: CarriageType }> = [
+  { label: 'Toa ghế ngồi', value: 'SEAT' },
+  { label: 'Toa giường nằm', value: 'SLEEPER' },
+  { label: 'Toa VIP', value: 'VIP' },
+]
+
+const carriageTypeMeta: Record<CarriageType, { color: string; label: string }> = {
+  SEAT: { color: 'blue', label: 'Toa ghế ngồi' },
+  SLEEPER: { color: 'purple', label: 'Toa giường nằm' },
+  VIP: { color: 'gold', label: 'Toa VIP' },
+}
+
 const seatStatusMeta = {
   ACTIVE: { color: 'green', label: 'Đang hoạt động' },
   BROKEN: { color: 'gold', label: 'Hỏng' },
   INACTIVE: { color: 'red', label: 'Tạm khóa' },
+}
+
+function getCarriageTypeMeta(type: string) {
+  return carriageTypeMeta[type as CarriageType] ?? { color: 'default', label: type }
 }
 
 const columns: ProColumns<Train>[] = [
@@ -96,8 +113,11 @@ const carriageColumns: ProColumns<Carriage>[] = [
   {
     title: 'Loại toa',
     dataIndex: 'carriageType',
-    width: 120,
-    render: (_, record) => <Tag>{record.carriageType}</Tag>,
+    width: 160,
+    render: (_, record) => {
+      const meta = getCarriageTypeMeta(record.carriageType)
+      return <Tag color={meta.color}>{meta.label}</Tag>
+    },
   },
   {
     title: 'Layout',
@@ -487,10 +507,10 @@ export function TrainsPage() {
           <Form.Item label="Tên toa" name="name" rules={[{ required: true, message: 'Vui lòng nhập tên toa' }]}>
             <Input placeholder="Toa 1 ghế ngồi" />
           </Form.Item>
-          <Form.Item label="Loại toa" name="carriageType" rules={[{ required: true, message: 'Vui lòng nhập loại toa' }]}>
-            <Input placeholder="SEAT" />
+          <Form.Item label="Loại toa" name="carriageType" rules={[{ required: true, message: 'Vui lòng chọn loại toa' }]}>
+            <Select options={carriageTypeOptions} placeholder="Chọn loại toa" />
           </Form.Item>
-          <Form.Item label="Seat map layout JSON" name="seatMapLayout">
+          <Form.Item label="Sơ đồ ghế JSON" name="seatMapLayout">
             <Input.TextArea rows={4} placeholder='{"rows":10,"columns":4}' />
           </Form.Item>
           <Form.Item label="Trạng thái" name="status" rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}>

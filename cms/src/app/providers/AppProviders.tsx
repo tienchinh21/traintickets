@@ -3,6 +3,7 @@ import { ProConfigProvider, viVNIntl } from '@ant-design/pro-components'
 import { App as AntApp, ConfigProvider } from 'antd'
 import viVN from 'antd/locale/vi_VN'
 import type { ReactNode } from 'react'
+import { AuthProvider } from '@/features/auth/providers/AuthProvider'
 import { queryClient } from '@/shared/api/queryClient'
 
 type AppProvidersProps = {
@@ -57,7 +58,9 @@ export function AppProviders({ children }: AppProvidersProps) {
     >
       <AntApp>
         <ProConfigProvider intl={viVNIntl}>
-          <QueryClientProvider client={queryClient}>{children}</QueryClientProvider>
+          <QueryClientProvider client={queryClient}>
+            <AuthProvider>{children}</AuthProvider>
+          </QueryClientProvider>
         </ProConfigProvider>
       </AntApp>
     </ConfigProvider>

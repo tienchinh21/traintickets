@@ -501,69 +501,90 @@ async function main() {
     where: { code: 'SLEEPER_4' }
   });
 
-  const carriage1 = await prisma.carriage.upsert({
+  const existingCarriage1 = await prisma.carriage.findFirst({
     where: {
-      trainId_carriageNumber: {
-        trainId: train.id,
-        carriageNumber: 1
-      }
-    },
-    update: {
-      name: 'Toa 1 ghế ngồi',
-      carriageType: CarriageType.SEAT,
-      seatMapLayout: { rows: 2, columns: 2 },
-      status: CarriageStatus.ACTIVE,
-      deletedAt: null
-    },
-    create: {
       trainId: train.id,
-      carriageNumber: 1,
-      name: 'Toa 1 ghế ngồi',
-      carriageType: CarriageType.SEAT,
-      seatMapLayout: { rows: 2, columns: 2 },
-      status: CarriageStatus.ACTIVE
+      carriageNumber: 1
     }
   });
+  const carriage1 = existingCarriage1
+    ? await prisma.carriage.update({
+        where: {
+          id: existingCarriage1.id
+        },
+        data: {
+          name: 'Toa 1 ghế ngồi',
+          carriageType: CarriageType.SEAT,
+          seatMapLayout: { rows: 2, columns: 2 },
+          status: CarriageStatus.ACTIVE,
+          deletedAt: null
+        }
+      })
+    : await prisma.carriage.create({
+        data: {
+          trainId: train.id,
+          carriageNumber: 1,
+          name: 'Toa 1 ghế ngồi',
+          carriageType: CarriageType.SEAT,
+          seatMapLayout: { rows: 2, columns: 2 },
+          status: CarriageStatus.ACTIVE
+        }
+      });
 
-  const carriage2 = await prisma.carriage.upsert({
+  const existingCarriage2 = await prisma.carriage.findFirst({
     where: {
-      trainId_carriageNumber: {
-        trainId: train.id,
-        carriageNumber: 2
-      }
-    },
-    update: {
-      name: 'Toa 2 giường nằm',
-      carriageType: CarriageType.SLEEPER,
-      seatMapLayout: { rooms: 1, bedsPerRoom: 4 },
-      status: CarriageStatus.ACTIVE,
-      deletedAt: null
-    },
-    create: {
       trainId: train.id,
-      carriageNumber: 2,
-      name: 'Toa 2 giường nằm',
-      carriageType: CarriageType.SLEEPER,
-      seatMapLayout: { rooms: 1, bedsPerRoom: 4 },
-      status: CarriageStatus.ACTIVE
+      carriageNumber: 2
     }
   });
+  const carriage2 = existingCarriage2
+    ? await prisma.carriage.update({
+        where: {
+          id: existingCarriage2.id
+        },
+        data: {
+          name: 'Toa 2 giường nằm',
+          carriageType: CarriageType.SLEEPER,
+          seatMapLayout: { rooms: 1, bedsPerRoom: 4 },
+          status: CarriageStatus.ACTIVE,
+          deletedAt: null
+        }
+      })
+    : await prisma.carriage.create({
+        data: {
+          trainId: train.id,
+          carriageNumber: 2,
+          name: 'Toa 2 giường nằm',
+          carriageType: CarriageType.SLEEPER,
+          seatMapLayout: { rooms: 1, bedsPerRoom: 4 },
+          status: CarriageStatus.ACTIVE
+        }
+      });
 
   if (softSeat) {
     for (const seatNumber of ['A1', 'A2', 'B1', 'B2']) {
-      await prisma.seat.upsert({
+      const existingSeat = await prisma.seat.findFirst({
         where: {
-          carriageId_seatNumber: {
-            carriageId: carriage1.id,
-            seatNumber
+          carriageId: carriage1.id,
+          seatNumber
+        }
+      });
+      if (existingSeat) {
+        await prisma.seat.update({
+          where: {
+            id: existingSeat.id
+          },
+          data: {
+            seatTypeId: softSeat.id,
+            status: SeatStatus.ACTIVE,
+            deletedAt: null
           }
-        },
-        update: {
-          seatTypeId: softSeat.id,
-          status: SeatStatus.ACTIVE,
-          deletedAt: null
-        },
-        create: {
+        });
+        continue;
+      }
+
+      await prisma.seat.create({
+        data: {
           carriageId: carriage1.id,
           seatTypeId: softSeat.id,
           seatNumber,
@@ -580,20 +601,29 @@ async function main() {
       ['1C', 1],
       ['1D', 2]
     ] as const) {
-      await prisma.seat.upsert({
+      const existingSeat = await prisma.seat.findFirst({
         where: {
-          carriageId_seatNumber: {
-            carriageId: carriage2.id,
-            seatNumber
+          carriageId: carriage2.id,
+          seatNumber
+        }
+      });
+      if (existingSeat) {
+        await prisma.seat.update({
+          where: {
+            id: existingSeat.id
+          },
+          data: {
+            seatTypeId: sleeper4.id,
+            floorNumber,
+            status: SeatStatus.ACTIVE,
+            deletedAt: null
           }
-        },
-        update: {
-          seatTypeId: sleeper4.id,
-          floorNumber,
-          status: SeatStatus.ACTIVE,
-          deletedAt: null
-        },
-        create: {
+        });
+        continue;
+      }
+
+      await prisma.seat.create({
+        data: {
           carriageId: carriage2.id,
           seatTypeId: sleeper4.id,
           seatNumber,

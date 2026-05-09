@@ -302,8 +302,8 @@ model Carriage {
   train Train @relation(fields: [trainId], references: [id])
   seats Seat[]
 
-  @@unique([trainId, carriageNumber])
   @@index([trainId])
+  @@index([trainId, carriageNumber])
   @@index([status])
   @@map("carriages")
 }
@@ -324,7 +324,7 @@ model Seat {
   carriage Carriage @relation(fields: [carriageId], references: [id])
   seatType SeatType @relation(fields: [seatTypeId], references: [id])
 
-  @@unique([carriageId, seatNumber])
+  @@index([carriageId, seatNumber])
   @@index([seatTypeId])
   @@index([status])
   @@map("seats")

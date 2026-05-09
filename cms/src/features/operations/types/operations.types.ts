@@ -93,6 +93,7 @@ export type SeatType = Record<string, unknown> & {
   name: string
   description: string | null
   baseMultiplier: string | number
+  allowedCarriageTypes: CarriageType[]
   status: EntityStatus
   createdAt: string
   updatedAt: string

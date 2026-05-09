@@ -3,6 +3,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App as AntApp, Button, Card, Form, Input, InputNumber, Modal, Select, Tag } from 'antd'
 import { useState } from 'react'
 import { operationsApi } from '@/features/operations/api/operationsApi'
+import {
+  carriageTypeOptions,
+  getCarriageTypeMeta,
+} from '@/features/operations/constants/carriage.constants'
 import type { SeatType, SeatTypeFormValues } from '@/features/operations/types/operations.types'
 import { getApiErrorMessage } from '@/shared/api/errors'
 import { PageHeader } from '@/shared/components/PageHeader'
@@ -31,6 +35,23 @@ const columns: ProColumns<SeatType>[] = [
     dataIndex: 'baseMultiplier',
     width: 120,
     render: (_, record) => Number(record.baseMultiplier).toLocaleString('vi-VN'),
+  },
+  {
+    title: 'Dùng cho loại toa',
+    dataIndex: 'allowedCarriageTypes',
+    width: 260,
+    render: (_, record) => (
+      <>
+        {record.allowedCarriageTypes.map((type) => {
+          const meta = getCarriageTypeMeta(type)
+          return (
+            <Tag key={type} color={meta.color}>
+              {meta.label}
+            </Tag>
+          )
+        })}
+      </>
+    ),
   },
   {
     title: 'Mô tả',
@@ -103,6 +124,7 @@ export function SeatTypesPage() {
       name: seatType.name,
       description: seatType.description ?? undefined,
       baseMultiplier: Number(seatType.baseMultiplier),
+      allowedCarriageTypes: seatType.allowedCarriageTypes,
       status: seatType.status,
     })
     setIsFormOpen(true)
@@ -188,6 +210,17 @@ export function SeatTypesPage() {
             rules={[{ required: true, message: 'Vui lòng nhập hệ số giá' }]}
           >
             <InputNumber className="full-width-input" min={0.1} step={0.1} />
+          </Form.Item>
+          <Form.Item
+            label="Dùng cho loại toa"
+            name="allowedCarriageTypes"
+            rules={[{ required: true, message: 'Vui lòng chọn ít nhất một loại toa' }]}
+          >
+            <Select
+              mode="multiple"
+              options={carriageTypeOptions}
+              placeholder="Chọn loại toa được phép dùng loại ghế này"
+            />
           </Form.Item>
           <Form.Item label="Trạng thái" name="status" rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}>
             <Select options={statusOptions} />

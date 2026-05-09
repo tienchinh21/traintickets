@@ -67,3 +67,18 @@ export type Train = Record<string, unknown> & {
 
 export type TrainFormValues = components['schemas']['CreateTrainDto']
 export type UpdateTrainPayload = components['schemas']['UpdateTrainDto']
+
+export type CarriageStatus = 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE'
+
+export type Carriage = Record<string, unknown> & {
+  id: string
+  trainId: string
+  carriageNumber: number
+  name: string
+  carriageType: string
+  seatMapLayout: Record<string, unknown> | null
+  status: CarriageStatus
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+}

@@ -1,9 +1,9 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
+import { ApartmentOutlined, DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App as AntApp, Button, Card, Form, Input, Modal, Select, Tag } from 'antd'
+import { App as AntApp, Button, Card, Drawer, Form, Input, Modal, Select, Tag } from 'antd'
 import { useState } from 'react'
 import { operationsApi } from '@/features/operations/api/operationsApi'
-import type { Train, TrainFormValues } from '@/features/operations/types/operations.types'
+import type { Carriage, Train, TrainFormValues } from '@/features/operations/types/operations.types'
 import { getApiErrorMessage } from '@/shared/api/errors'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { CoreTable, createActionColumn } from '@/shared/components/table'
@@ -16,6 +16,12 @@ const statusOptions = [
 ]
 
 const trainStatusMeta = {
+  ACTIVE: { color: 'green', label: 'Đang hoạt động' },
+  MAINTENANCE: { color: 'gold', label: 'Bảo trì' },
+  INACTIVE: { color: 'red', label: 'Tạm khóa' },
+}
+
+const carriageStatusMeta = {
   ACTIVE: { color: 'green', label: 'Đang hoạt động' },
   MAINTENANCE: { color: 'gold', label: 'Bảo trì' },
   INACTIVE: { color: 'red', label: 'Tạm khóa' },
@@ -51,16 +57,62 @@ const columns: ProColumns<Train>[] = [
   },
 ]
 
+const carriageColumns: ProColumns<Carriage>[] = [
+  {
+    title: 'Số toa',
+    dataIndex: 'carriageNumber',
+    width: 100,
+  },
+  {
+    title: 'Tên toa',
+    dataIndex: 'name',
+    width: 220,
+  },
+  {
+    title: 'Loại toa',
+    dataIndex: 'carriageType',
+    width: 120,
+    render: (_, record) => <Tag>{record.carriageType}</Tag>,
+  },
+  {
+    title: 'Layout',
+    dataIndex: 'seatMapLayout',
+    width: 260,
+    ellipsis: true,
+    render: (_, record) => (
+      <span className="table-code">
+        {record.seatMapLayout ? JSON.stringify(record.seatMapLayout) : '-'}
+      </span>
+    ),
+  },
+  {
+    title: 'Trạng thái',
+    dataIndex: 'status',
+    width: 150,
+    render: (_, record) => {
+      const meta = carriageStatusMeta[record.status]
+      return <Tag color={meta.color}>{meta.label}</Tag>
+    },
+  },
+]
+
 export function TrainsPage() {
   const { message, modal } = AntApp.useApp()
   const queryClient = useQueryClient()
   const [form] = Form.useForm<TrainFormValues>()
   const [editingTrain, setEditingTrain] = useState<Train | null>(null)
+  const [carriageTrain, setCarriageTrain] = useState<Train | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
 
   const trainsQuery = useQuery({
     queryKey: ['trains'],
     queryFn: async () => (await operationsApi.getTrains()).data,
+  })
+
+  const carriagesQuery = useQuery({
+    queryKey: ['trains', carriageTrain?.id, 'carriages'],
+    enabled: Boolean(carriageTrain),
+    queryFn: async () => (await operationsApi.getTrainCarriages(carriageTrain?.id ?? '')).data,
   })
 
   const saveTrainMutation = useMutation({
@@ -120,6 +172,12 @@ export function TrainsPage() {
 
   const actionColumn = createActionColumn<Train>((record) => [
     {
+      key: 'carriages',
+      icon: <ApartmentOutlined />,
+      tooltip: 'Xem toa của tàu',
+      onClick: () => setCarriageTrain(record),
+    },
+    {
       key: 'edit',
       icon: <EditOutlined />,
       tooltip: 'Sửa tàu',
@@ -132,7 +190,7 @@ export function TrainsPage() {
       danger: true,
       onClick: () => confirmDelete(record),
     },
-  ])
+  ], 136)
 
   return (
     <>
@@ -186,6 +244,21 @@ export function TrainsPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <Drawer
+        title={carriageTrain ? `Toa của ${carriageTrain.name}` : 'Toa của tàu'}
+        open={Boolean(carriageTrain)}
+        width={820}
+        onClose={() => setCarriageTrain(null)}
+      >
+        <CoreTable<Carriage>
+          columns={carriageColumns}
+          dataSource={carriagesQuery.data ?? []}
+          loading={carriagesQuery.isLoading}
+          pagination={false}
+          toolBarRender={false}
+        />
+      </Drawer>
     </>
   )
 }

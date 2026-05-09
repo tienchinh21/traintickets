@@ -1,6 +1,7 @@
 import type { ApiSuccess } from '@/shared/api/types'
 import { http } from '@/shared/api/http'
 import type {
+  Carriage,
   Route,
   RouteDetail,
   RouteFormValues,
@@ -76,6 +77,11 @@ export const operationsApi = {
 
   async deleteTrain(id: string) {
     const response = await http.delete<ApiSuccess<Train>>(`/trains/${id}`)
+    return response.data
+  },
+
+  async getTrainCarriages(trainId: string) {
+    const response = await http.get<ApiSuccess<Carriage[]>>(`/trains/${trainId}/carriages`)
     return response.data
   },
 }

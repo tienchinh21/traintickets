@@ -1,6 +1,14 @@
 import type { ApiSuccess } from '@/shared/api/types'
 import { http } from '@/shared/api/http'
-import type { Station, StationFormValues, UpdateStationPayload } from '../types/operations.types'
+import type {
+  Route,
+  RouteDetail,
+  RouteFormValues,
+  Station,
+  StationFormValues,
+  UpdateRoutePayload,
+  UpdateStationPayload,
+} from '../types/operations.types'
 
 export const operationsApi = {
   async getStations() {
@@ -20,6 +28,31 @@ export const operationsApi = {
 
   async deleteStation(id: string) {
     const response = await http.delete<ApiSuccess<Station>>(`/stations/${id}`)
+    return response.data
+  },
+
+  async getRoutes() {
+    const response = await http.get<ApiSuccess<Route[]>>('/routes')
+    return response.data
+  },
+
+  async getRoute(id: string) {
+    const response = await http.get<ApiSuccess<RouteDetail>>(`/routes/${id}`)
+    return response.data
+  },
+
+  async createRoute(payload: RouteFormValues) {
+    const response = await http.post<ApiSuccess<RouteDetail>>('/routes', payload)
+    return response.data
+  },
+
+  async updateRoute(id: string, payload: UpdateRoutePayload) {
+    const response = await http.patch<ApiSuccess<RouteDetail>>(`/routes/${id}`, payload)
+    return response.data
+  },
+
+  async deleteRoute(id: string) {
+    const response = await http.delete<ApiSuccess<Route>>(`/routes/${id}`)
     return response.data
   },
 }

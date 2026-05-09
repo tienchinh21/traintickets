@@ -189,6 +189,29 @@ a {
   width: 100%;
 }
 
+.route-stops {
+  display: grid;
+  gap: 12px;
+}
+
+.route-stops-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 700;
+}
+
+.route-stop-row {
+  padding: 12px;
+  border: 1px solid rgba(31, 41, 38, 0.08);
+  border-radius: 8px;
+  background: #fffdf7;
+}
+
+.route-stop-station {
+  width: 220px;
+}
+
 .page-header {
   display: flex;
   align-items: flex-start;

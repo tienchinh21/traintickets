@@ -4,7 +4,7 @@ export class AppException extends HttpException {
   constructor(
     code: string,
     message: string,
-    statusCode: HttpStatus = HttpStatus.BAD_REQUEST,
+    statusCode: HttpStatus | number = HttpStatus.BAD_REQUEST,
     details: unknown[] = []
   ) {
     super(

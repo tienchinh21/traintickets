@@ -1,9 +1,6 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { CarriageType, Prisma } from '@prisma/client';
+import { AppException } from '../../common/exceptions/app.exception';
 import { getPaginationOffset } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { CarriageQueryDto } from './dto/carriage-query.dto';
@@ -41,7 +38,12 @@ export class CarriagesService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(trainId: string, dto: CreateCarriageDto) {
-    await this.ensureTrainExists(trainId);
+    const train = await this.ensureTrainExists(trainId);
+    await this.ensureCarriageNumberIsUnique(
+      trainId,
+      dto.carriageNumber,
+      train.code
+    );
 
     await this.prisma.carriage.create({
       data: {
@@ -120,7 +122,16 @@ export class CarriagesService {
   }
 
   async update(id: string, dto: UpdateCarriageDto) {
-    await this.findById(id);
+    const currentCarriage = await this.findExistingCarriage(id);
+
+    if (dto.carriageNumber) {
+      await this.ensureCarriageNumberIsUnique(
+        currentCarriage.trainId,
+        dto.carriageNumber,
+        currentCarriage.train.code,
+        id
+      );
+    }
 
     if (dto.carriageType) {
       await this.ensureExistingSeatsMatchCarriageType(id, dto.carriageType);
@@ -164,12 +175,70 @@ export class CarriagesService {
         deletedAt: null
       },
       select: {
-        id: true
+        id: true,
+        code: true
       }
     });
 
     if (!train) {
-      throw new BadRequestException('Tàu không tồn tại hoặc đã bị xóa mềm');
+      throw new AppException(
+        'TRAIN_NOT_FOUND',
+        'Tàu không tồn tại hoặc đã bị xóa mềm',
+        undefined,
+        ['Tàu không tồn tại hoặc đã bị xóa mềm']
+      );
+    }
+
+    return train;
+  }
+
+  private async findExistingCarriage(id: string) {
+    const carriage = await this.prisma.carriage.findFirst({
+      where: {
+        id,
+        deletedAt: null
+      },
+      include: {
+        train: {
+          select: {
+            code: true
+          }
+        }
+      }
+    });
+
+    if (!carriage) {
+      throw new NotFoundException('Không tìm thấy toa');
+    }
+
+    return carriage;
+  }
+
+  private async ensureCarriageNumberIsUnique(
+    trainId: string,
+    carriageNumber: number,
+    trainCode: string,
+    excludeId?: string
+  ) {
+    const existingCarriage = await this.prisma.carriage.findFirst({
+      where: {
+        trainId,
+        carriageNumber,
+        deletedAt: null,
+        ...(excludeId ? { id: { not: excludeId } } : {})
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (existingCarriage) {
+      throw new AppException(
+        'CARRIAGE_NUMBER_DUPLICATED',
+        'Số toa đã tồn tại',
+        undefined,
+        [`Số toa ${carriageNumber} đã tồn tại trong tàu ${trainCode}`]
+      );
     }
   }
 
@@ -195,8 +264,13 @@ export class CarriagesService {
     );
 
     if (invalidSeat) {
-      throw new BadRequestException(
-        `Không thể đổi toa sang ${this.getCarriageTypeLabel(carriageType)} vì đang có loại ghế ${invalidSeat.seatType.name} không phù hợp`
+      throw new AppException(
+        'SEAT_TYPE_NOT_ALLOWED_FOR_CARRIAGE',
+        'Loại ghế không phù hợp với loại toa',
+        undefined,
+        [
+          `Không thể đổi toa sang ${this.getCarriageTypeLabel(carriageType)} vì đang có loại ghế ${invalidSeat.seatType.name} không phù hợp`
+        ]
       );
     }
   }

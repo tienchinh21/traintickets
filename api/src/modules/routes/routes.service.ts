@@ -4,6 +4,7 @@ import {
   NotFoundException
 } from '@nestjs/common';
 import { Prisma, StationStatus } from '@prisma/client';
+import { AppException } from '../../common/exceptions/app.exception';
 import { getPaginationOffset } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { CreateRouteDto } from './dto/create-route.dto';
@@ -160,7 +161,12 @@ export class RoutesService {
 
   private async validateStops(stops: RouteStopDto[]) {
     if (stops.length < 2) {
-      throw new BadRequestException('Tuyến phải có ít nhất 2 ga');
+      throw new AppException(
+        'ROUTE_MUST_HAVE_AT_LEAST_TWO_STOPS',
+        'Tuyến phải có ít nhất 2 ga dừng',
+        undefined,
+        ['Tuyến phải có ít nhất 2 ga dừng']
+      );
     }
 
     const stopOrders = new Set<number>();
@@ -168,14 +174,20 @@ export class RoutesService {
 
     for (const stop of stops) {
       if (stopOrders.has(stop.stopOrder)) {
-        throw new BadRequestException(
-          'stop_order không được trùng trong cùng tuyến'
+        throw new AppException(
+          'ROUTE_STOP_DUPLICATED',
+          'Ga dừng trong tuyến bị trùng',
+          undefined,
+          [`Thứ tự ga dừng ${stop.stopOrder} bị trùng trong cùng tuyến`]
         );
       }
 
       if (stationIds.has(stop.stationId)) {
-        throw new BadRequestException(
-          'station_id không được trùng trong cùng tuyến'
+        throw new AppException(
+          'ROUTE_STOP_DUPLICATED',
+          'Ga dừng trong tuyến bị trùng',
+          undefined,
+          [`Ga ${stop.stationId} bị trùng trong cùng tuyến`]
         );
       }
 

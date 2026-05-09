@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { AllExceptionsFilter } from './common/filters/all-exceptions.filter';
 import { TransformResponseInterceptor } from './common/interceptors/transform-response.interceptor';
+import { createValidationException } from './common/validation/validation-exception.factory';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -21,7 +22,8 @@ async function bootstrap() {
       transform: true,
       transformOptions: {
         enableImplicitConversion: true
-      }
+      },
+      exceptionFactory: createValidationException
     })
   );
   app.useGlobalFilters(new AllExceptionsFilter());

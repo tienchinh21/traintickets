@@ -7,6 +7,7 @@ import {
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
+import { AppException } from '../exceptions/app.exception';
 
 export type AuthenticatedUser = {
   sub: string;
@@ -41,9 +42,13 @@ export class JwtAuthGuard implements CanActivate {
           secret: this.configService.get<string>('jwt.accessSecret')
         }
       );
-    } catch {
-      throw new UnauthorizedException(
-        'Access token không hợp lệ hoặc đã hết hạn'
+    } catch (error) {
+      const isExpired = this.isTokenExpired(error);
+      throw new AppException(
+        isExpired ? 'AUTH_TOKEN_EXPIRED' : 'UNAUTHORIZED',
+        isExpired ? 'Phiên đăng nhập đã hết hạn' : 'Access token không hợp lệ',
+        401,
+        [isExpired ? 'Access token đã hết hạn' : 'Access token không hợp lệ']
       );
     }
 
@@ -53,5 +58,14 @@ export class JwtAuthGuard implements CanActivate {
   private extractTokenFromHeader(request: Request): string | undefined {
     const [type, token] = request.headers.authorization?.split(' ') ?? [];
     return type === 'Bearer' ? token : undefined;
+  }
+
+  private isTokenExpired(error: unknown) {
+    return (
+      typeof error === 'object' &&
+      error !== null &&
+      'name' in error &&
+      error.name === 'TokenExpiredError'
+    );
   }
 }

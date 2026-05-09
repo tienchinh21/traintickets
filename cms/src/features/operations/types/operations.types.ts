@@ -51,3 +51,19 @@ export type RouteDetail = Route & {
 
 export type RouteFormValues = components['schemas']['CreateRouteDto']
 export type UpdateRoutePayload = components['schemas']['UpdateRouteDto']
+
+export type TrainStatus = 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE'
+
+export type Train = Record<string, unknown> & {
+  id: string
+  code: string
+  name: string
+  description: string | null
+  status: TrainStatus
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+}
+
+export type TrainFormValues = components['schemas']['CreateTrainDto']
+export type UpdateTrainPayload = components['schemas']['UpdateTrainDto']

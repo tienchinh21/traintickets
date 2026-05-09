@@ -31,6 +31,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -116,7 +118,7 @@ jobs:
           GHCR_USERNAME: ${{ github.actor }}
           GHCR_TOKEN: ${{ secrets.GHCR_TOKEN }}
 
-      - name: Notify Telegram
+      - name: Notify Telegram success
         if: success()
         env:
           TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
@@ -127,12 +129,40 @@ jobs:
             exit 0
           fi
 
-          MESSAGE=$(printf '%s\n\nDịch vụ: %s\nRepo: %s\nNhánh: %s\nCommit: %s\nNgười deploy: %s\nChi tiết: %s' \
-            "Triển khai API thành công" \
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          COMMIT_MESSAGE="$(git log -1 --pretty=%s)"
+          MESSAGE=$(printf '%s\n\nDịch vụ: %s\nTrạng thái: %s\nCommit: %s\nMessage: %s\nNgười deploy: %s\nRun: %s' \
+            "✅ Deploy thành công" \
             "API" \
-            "${{ github.repository }}" \
-            "${{ github.ref_name }}" \
-            "${{ github.sha }}" \
+            "Thành công" \
+            "$SHORT_SHA" \
+            "$COMMIT_MESSAGE" \
+            "${{ github.actor }}" \
+            "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}")
+
+          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}/sendMessage" \
+            -d "chat_id=${TELEGRAM_CHAT_ID}" \
+            -d "text=${MESSAGE}"
+
+      - name: Notify Telegram failure
+        if: failure()
+        env:
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+        run: |
+          if [ -z "$TELEGRAM_BOT_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "Telegram secrets are not configured; skipping notification."
+            exit 0
+          fi
+
+          SHORT_SHA="$(git rev-parse --short HEAD)"
+          COMMIT_MESSAGE="$(git log -1 --pretty=%s)"
+          MESSAGE=$(printf '%s\n\nDịch vụ: %s\nTrạng thái: %s\nCommit: %s\nMessage: %s\nNgười deploy: %s\nRun: %s' \
+            "❌ Deploy thất bại" \
+            "API" \
+            "Thất bại" \
+            "$SHORT_SHA" \
+            "$COMMIT_MESSAGE" \
             "${{ github.actor }}" \
             "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}")
 

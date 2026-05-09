@@ -2,13 +2,11 @@ import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { ProtectedRoute } from '@/features/auth/components/ProtectedRoute'
 import { LoginPage } from '@/features/auth/pages/LoginPage'
 import { DashboardPage } from '@/pages/dashboard/DashboardPage'
-import { CarriagesPage } from '@/pages/carriages/CarriagesPage'
 import { NotFoundPage } from '@/pages/not-found/NotFoundPage'
 import { PermissionsPage } from '@/pages/permissions/PermissionsPage'
 import { RolesPage } from '@/pages/roles/RolesPage'
 import { RoutesPage } from '@/pages/routes/RoutesPage'
 import { SeatTypesPage } from '@/pages/seat-types/SeatTypesPage'
-import { SeatsPage } from '@/pages/seats/SeatsPage'
 import { StationsPage } from '@/pages/stations/StationsPage'
 import { TrainsPage } from '@/pages/trains/TrainsPage'
 import { UsersPage } from '@/pages/users/UsersPage'
@@ -30,8 +28,6 @@ export function AppRouter() {
             <Route path="/routes" element={<RoutesPage />} />
             <Route path="/trains" element={<TrainsPage />} />
             <Route path="/seat-types" element={<SeatTypesPage />} />
-            <Route path="/carriages" element={<CarriagesPage />} />
-            <Route path="/seats" element={<SeatsPage />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFoundPage />} />

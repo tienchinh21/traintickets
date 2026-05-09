@@ -212,6 +212,21 @@ a {
   width: 220px;
 }
 
+.train-detail-summary {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 14px;
+  border: 1px solid rgba(31, 41, 38, 0.08);
+  border-radius: 8px;
+  background: #fffdf7;
+}
+
+.train-detail-seats {
+  margin-top: 18px;
+}
+
 .page-header {
   display: flex;
   align-items: flex-start;

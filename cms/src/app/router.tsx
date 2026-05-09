@@ -6,6 +6,7 @@ import { NotFoundPage } from '@/pages/not-found/NotFoundPage'
 import { PermissionsPage } from '@/pages/permissions/PermissionsPage'
 import { RolesPage } from '@/pages/roles/RolesPage'
 import { RoutesPage } from '@/pages/routes/RoutesPage'
+import { SeatTypesPage } from '@/pages/seat-types/SeatTypesPage'
 import { StationsPage } from '@/pages/stations/StationsPage'
 import { TrainsPage } from '@/pages/trains/TrainsPage'
 import { UsersPage } from '@/pages/users/UsersPage'
@@ -26,6 +27,7 @@ export function AppRouter() {
             <Route path="/stations" element={<StationsPage />} />
             <Route path="/routes" element={<RoutesPage />} />
             <Route path="/trains" element={<TrainsPage />} />
+            <Route path="/seat-types" element={<SeatTypesPage />} />
           </Route>
         </Route>
         <Route path="*" element={<NotFoundPage />} />

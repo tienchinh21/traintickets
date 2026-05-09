@@ -6,8 +6,11 @@ import type {
   RouteFormValues,
   Station,
   StationFormValues,
+  Train,
+  TrainFormValues,
   UpdateRoutePayload,
   UpdateStationPayload,
+  UpdateTrainPayload,
 } from '../types/operations.types'
 
 export const operationsApi = {
@@ -53,6 +56,26 @@ export const operationsApi = {
 
   async deleteRoute(id: string) {
     const response = await http.delete<ApiSuccess<Route>>(`/routes/${id}`)
+    return response.data
+  },
+
+  async getTrains() {
+    const response = await http.get<ApiSuccess<Train[]>>('/trains')
+    return response.data
+  },
+
+  async createTrain(payload: TrainFormValues) {
+    const response = await http.post<ApiSuccess<Train>>('/trains', payload)
+    return response.data
+  },
+
+  async updateTrain(id: string, payload: UpdateTrainPayload) {
+    const response = await http.patch<ApiSuccess<Train>>(`/trains/${id}`, payload)
+    return response.data
+  },
+
+  async deleteTrain(id: string) {
+    const response = await http.delete<ApiSuccess<Train>>(`/trains/${id}`)
     return response.data
   },
 }

@@ -2,6 +2,7 @@ import type { ApiSuccess } from '@/shared/api/types'
 import { http } from '@/shared/api/http'
 import type {
   Carriage,
+  CarriageFormValues,
   Route,
   RouteDetail,
   RouteFormValues,
@@ -11,6 +12,7 @@ import type {
   StationFormValues,
   Train,
   TrainFormValues,
+  UpdateCarriagePayload,
   UpdateRoutePayload,
   UpdateSeatTypePayload,
   UpdateStationPayload,
@@ -85,6 +87,21 @@ export const operationsApi = {
 
   async getTrainCarriages(trainId: string) {
     const response = await http.get<ApiSuccess<Carriage[]>>(`/trains/${trainId}/carriages`)
+    return response.data
+  },
+
+  async createCarriage(trainId: string, payload: CarriageFormValues) {
+    const response = await http.post<ApiSuccess<Carriage>>(`/trains/${trainId}/carriages`, payload)
+    return response.data
+  },
+
+  async updateCarriage(id: string, payload: UpdateCarriagePayload) {
+    const response = await http.patch<ApiSuccess<Carriage>>(`/carriages/${id}`, payload)
+    return response.data
+  },
+
+  async deleteCarriage(id: string) {
+    const response = await http.delete<ApiSuccess<Carriage>>(`/carriages/${id}`)
     return response.data
   },
 

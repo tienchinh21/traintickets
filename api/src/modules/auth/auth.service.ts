@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { RoleStatus, UserStatus, UserType } from '@prisma/client';
+import { Prisma, RoleStatus, UserStatus, UserType } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes, createHash } from 'crypto';
 import { AppException } from '../../common/exceptions/app.exception';
@@ -22,6 +22,8 @@ type TokenPayload = {
   phone?: string | null;
   userType: UserType;
 };
+
+type DatabaseClient = PrismaService | Prisma.TransactionClient;
 
 @Injectable()
 export class AuthService {
@@ -106,20 +108,43 @@ export class AuthService {
 
   async refresh(dto: RefreshTokenDto) {
     const tokenHash = this.hashToken(dto.refreshToken);
-    const refreshToken = await this.findActiveRefreshToken(tokenHash);
 
-    if (!refreshToken || refreshToken.user.status !== UserStatus.ACTIVE) {
-      throw new AppException(
-        'AUTH_TOKEN_EXPIRED',
-        'Phiên đăng nhập đã hết hạn',
-        401,
-        ['Refresh token không hợp lệ hoặc đã hết hạn']
-      );
-    }
+    return this.prisma.$transaction(async (tx) => {
+      const refreshToken = await this.findActiveRefreshToken(tokenHash, tx);
 
-    await this.revokeRefreshToken(tokenHash);
+      if (!refreshToken || refreshToken.user.status !== UserStatus.ACTIVE) {
+        throw new AppException(
+          'AUTH_TOKEN_EXPIRED',
+          'Phiên đăng nhập đã hết hạn',
+          401,
+          ['Refresh token không hợp lệ hoặc đã hết hạn']
+        );
+      }
 
-    return this.issueTokens(refreshToken.userId);
+      const revokedToken = await tx.refreshToken.updateMany({
+        where: {
+          id: refreshToken.id,
+          revokedAt: null,
+          expiresAt: {
+            gt: new Date()
+          }
+        },
+        data: {
+          revokedAt: new Date()
+        }
+      });
+
+      if (revokedToken.count !== 1) {
+        throw new AppException(
+          'AUTH_TOKEN_EXPIRED',
+          'Phiên đăng nhập đã hết hạn',
+          401,
+          ['Refresh token không hợp lệ hoặc đã hết hạn']
+        );
+      }
+
+      return this.issueTokens(refreshToken.userId, tx);
+    });
   }
 
   async logout(refreshToken: string) {
@@ -148,8 +173,11 @@ export class AuthService {
     return this.usersService.findByPhone(identifier);
   }
 
-  createRefreshToken(dto: CreateRefreshTokenDto) {
-    return this.prisma.refreshToken.create({
+  createRefreshToken(
+    dto: CreateRefreshTokenDto,
+    client: DatabaseClient = this.prisma
+  ) {
+    return client.refreshToken.create({
       data: {
         userId: dto.userId,
         tokenHash: dto.tokenHash,
@@ -161,8 +189,11 @@ export class AuthService {
     });
   }
 
-  findActiveRefreshToken(tokenHash: string) {
-    return this.prisma.refreshToken.findFirst({
+  findActiveRefreshToken(
+    tokenHash: string,
+    client: DatabaseClient = this.prisma
+  ) {
+    return client.refreshToken.findFirst({
       where: {
         tokenHash,
         revokedAt: null,
@@ -197,8 +228,11 @@ export class AuthService {
     });
   }
 
-  private async issueTokens(userId: string) {
-    const user = await this.usersService.findAuthProfileById(userId);
+  private async issueTokens(
+    userId: string,
+    client: DatabaseClient = this.prisma
+  ) {
+    const user = await this.findAuthProfileById(userId, client);
 
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
@@ -211,11 +245,14 @@ export class AuthService {
     });
     const refreshToken = randomBytes(48).toString('base64url');
 
-    await this.createRefreshToken({
-      userId: user.id.toString(),
-      tokenHash: this.hashToken(refreshToken),
-      expiresAt: this.resolveRefreshExpiresAt()
-    });
+    await this.createRefreshToken(
+      {
+        userId: user.id.toString(),
+        tokenHash: this.hashToken(refreshToken),
+        expiresAt: this.resolveRefreshExpiresAt()
+      },
+      client
+    );
 
     return {
       data: {
@@ -229,6 +266,30 @@ export class AuthService {
 
   private hashToken(token: string) {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private findAuthProfileById(userId: string, client: DatabaseClient) {
+    return client.user.findFirst({
+      where: {
+        id: userId,
+        deletedAt: null
+      },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
   }
 
   private resolveRefreshExpiresAt() {

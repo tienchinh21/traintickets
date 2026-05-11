@@ -24,6 +24,58 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Danh sách người dùng
+         * @description Lấy danh sách người dùng kèm vai trò. Hỗ trợ tìm theo họ tên, email hoặc số điện thoại.
+         */
+        get: operations["UsersController_findMany"];
+        put?: never;
+        /**
+         * Tạo người dùng
+         * @description Tạo tài khoản người dùng CMS hoặc khách hàng. BE tự hash password và gán roleIds nếu có.
+         */
+        post: operations["UsersController_create"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/users/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Chi tiết người dùng
+         * @description Lấy chi tiết người dùng kèm danh sách vai trò.
+         */
+        get: operations["UsersController_findById"];
+        put?: never;
+        post?: never;
+        /**
+         * Xóa người dùng
+         * @description Xóa mềm người dùng bằng deletedAt và chuyển trạng thái sang INACTIVE.
+         */
+        delete: operations["UsersController_delete"];
+        options?: never;
+        head?: never;
+        /**
+         * Cập nhật người dùng
+         * @description Cập nhật thông tin tài khoản, trạng thái, mật khẩu và danh sách vai trò.
+         */
+        patch: operations["UsersController_update"];
+        trace?: never;
+    };
     "/auth/register": {
         parameters: {
             query?: never;
@@ -564,6 +616,90 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        CreateUserDto: {
+            /**
+             * @description Email đăng nhập hoặc nhận vé
+             * @example user@example.com
+             */
+            email?: string;
+            /**
+             * @description Số điện thoại đăng nhập hoặc nhận thông báo
+             * @example 0901234567
+             */
+            phone?: string;
+            /**
+             * @description Mật khẩu đăng nhập. BE sẽ tự hash trước khi lưu.
+             * @example Admin-sSjRqGa9JH-6#1
+             */
+            password: string;
+            /**
+             * @description Họ tên hiển thị
+             * @example Nguyễn Văn A
+             */
+            fullName: string;
+            /**
+             * @description Loại người dùng
+             * @example CUSTOMER
+             * @enum {string}
+             */
+            userType: "CUSTOMER" | "STAFF" | "SYSTEM";
+            /**
+             * @description Trạng thái tài khoản
+             * @example ACTIVE
+             * @enum {string}
+             */
+            status: "ACTIVE" | "INACTIVE" | "LOCKED";
+            /**
+             * @description Danh sách ID vai trò gán cho người dùng
+             * @example [
+             *       1,
+             *       2
+             *     ]
+             */
+            roleIds?: number[];
+        };
+        UpdateUserDto: {
+            /**
+             * @description Email đăng nhập hoặc nhận vé
+             * @example user@example.com
+             */
+            email?: string;
+            /**
+             * @description Số điện thoại đăng nhập hoặc nhận thông báo
+             * @example 0901234567
+             */
+            phone?: string;
+            /**
+             * @description Mật khẩu đăng nhập. BE sẽ tự hash trước khi lưu.
+             * @example Admin-sSjRqGa9JH-6#1
+             */
+            password?: string;
+            /**
+             * @description Họ tên hiển thị
+             * @example Nguyễn Văn A
+             */
+            fullName?: string;
+            /**
+             * @description Loại người dùng
+             * @example CUSTOMER
+             * @enum {string}
+             */
+            userType?: "CUSTOMER" | "STAFF" | "SYSTEM";
+            /**
+             * @description Trạng thái tài khoản
+             * @example ACTIVE
+             * @enum {string}
+             */
+            status?: "ACTIVE" | "INACTIVE" | "LOCKED";
+            /**
+             * @description Danh sách ID vai trò gán cho người dùng
+             * @example [
+             *       1,
+             *       2
+             *     ]
+             */
+            roleIds?: number[];
+        };
         RegisterDto: {
             /**
              * @description Email đăng nhập. Bắt buộc nếu không truyền số điện thoại
@@ -1306,6 +1442,134 @@ export interface operations {
                         };
                     };
                 };
+            };
+        };
+    };
+    UsersController_findMany: {
+        parameters: {
+            query?: {
+                /** @description Tìm theo họ tên, email hoặc số điện thoại */
+                search?: string;
+                /** @description Lọc theo loại người dùng */
+                userType?: "CUSTOMER" | "STAFF" | "SYSTEM";
+                /** @description Lọc theo trạng thái tài khoản */
+                status?: "ACTIVE" | "INACTIVE" | "LOCKED";
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Danh sách người dùng. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersController_create: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateUserDto"];
+            };
+        };
+        responses: {
+            /** @description Người dùng đã được tạo. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Thiếu hoặc sai access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User không có permission USERS_CREATE. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersController_findById: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID người dùng */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Chi tiết người dùng. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersController_delete: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID người dùng */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Người dùng đã bị xóa mềm. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    UsersController_update: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description ID người dùng */
+                id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateUserDto"];
+            };
+        };
+        responses: {
+            /** @description Người dùng đã được cập nhật. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };

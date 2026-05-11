@@ -51,6 +51,17 @@ async function main() {
   }
 
   const permissions = [
+    ['USERS_CREATE', 'Tạo người dùng', 'users', 'create', 'POST', '/users'],
+    ['USERS_READ', 'Xem người dùng', 'users', 'read', 'GET', '/users'],
+    [
+      'USERS_UPDATE',
+      'Cập nhật người dùng',
+      'users',
+      'update',
+      'PATCH',
+      '/users/:id'
+    ],
+    ['USERS_DELETE', 'Xóa người dùng', 'users', 'delete', 'DELETE', '/users/:id'],
     ['ROLES_CREATE', 'Tạo vai trò', 'roles', 'create', 'POST', '/roles'],
     ['ROLES_READ', 'Xem vai trò', 'roles', 'read', 'GET', '/roles'],
     [

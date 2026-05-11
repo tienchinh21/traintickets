@@ -209,7 +209,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message: 'Số toa đã tồn tại',
         details: ['Số toa đã tồn tại trong tàu']
       },
+      'train_id,active_carriage_number': {
+        code: 'CARRIAGE_NUMBER_DUPLICATED',
+        message: 'Số toa đã tồn tại',
+        details: ['Số toa đã tồn tại trong tàu']
+      },
       'carriage_id,seat_number': {
+        code: 'SEAT_NUMBER_DUPLICATED',
+        message: 'Số ghế đã tồn tại',
+        details: ['Số ghế đã tồn tại trong toa']
+      },
+      'carriage_id,active_seat_number': {
         code: 'SEAT_NUMBER_DUPLICATED',
         message: 'Số ghế đã tồn tại',
         details: ['Số ghế đã tồn tại trong toa']

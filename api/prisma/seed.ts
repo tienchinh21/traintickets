@@ -61,7 +61,14 @@ async function main() {
       'PATCH',
       '/users/:id'
     ],
-    ['USERS_DELETE', 'Xóa người dùng', 'users', 'delete', 'DELETE', '/users/:id'],
+    [
+      'USERS_DELETE',
+      'Xóa người dùng',
+      'users',
+      'delete',
+      'DELETE',
+      '/users/:id'
+    ],
     ['ROLES_CREATE', 'Tạo vai trò', 'roles', 'create', 'POST', '/roles'],
     ['ROLES_READ', 'Xem vai trò', 'roles', 'read', 'GET', '/roles'],
     [

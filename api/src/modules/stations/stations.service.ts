@@ -1,5 +1,5 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma } from '@prisma/client';
+import { Prisma, RouteStatus } from '@prisma/client';
 import { AppException } from '../../common/exceptions/app.exception';
 import { getPaginationOffset } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../database/prisma/prisma.service';
@@ -100,8 +100,8 @@ export class StationsService {
 
   async delete(id: string) {
     await this.findById(id);
+    await this.ensureStationIsNotUsedByActiveRoute(id);
 
-    // TODO: Khi có routes, không cho xóa ga nếu đang được dùng trong route active.
     await this.prisma.station.update({
       where: { id },
       data: {
@@ -139,6 +139,37 @@ export class StationsService {
         'Mã ga đã tồn tại',
         undefined,
         [`Mã ga ${code} đã tồn tại`]
+      );
+    }
+  }
+
+  private async ensureStationIsNotUsedByActiveRoute(id: string) {
+    const routeStop = await this.prisma.routeStop.findFirst({
+      where: {
+        stationId: id,
+        route: {
+          deletedAt: null,
+          status: RouteStatus.ACTIVE
+        }
+      },
+      include: {
+        route: {
+          select: {
+            code: true,
+            name: true
+          }
+        }
+      }
+    });
+
+    if (routeStop) {
+      throw new AppException(
+        'STATION_IN_ACTIVE_ROUTE',
+        'Không thể xóa ga đang thuộc tuyến hoạt động',
+        400,
+        [
+          `Ga đang được dùng trong tuyến ${routeStop.route.code} - ${routeStop.route.name}`
+        ]
       );
     }
   }

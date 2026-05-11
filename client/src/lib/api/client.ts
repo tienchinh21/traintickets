@@ -1,0 +1,14 @@
+import axios from "axios";
+
+export const apiClient = axios.create({
+  baseURL: process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:3000/api",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  timeout: 15_000,
+});
+
+apiClient.interceptors.response.use(
+  (response) => response,
+  (error) => Promise.reject(error)
+);

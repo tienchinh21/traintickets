@@ -40,7 +40,7 @@ export class PermissionsController {
   @ApiOperation({
     summary: 'Tạo quyền',
     description:
-      'Tạo permission động. Nếu truyền method/path, guard có thể check quyền theo route runtime.'
+      'Tạo permission động. method/path là bắt buộc vì guard check quyền theo route runtime.'
   })
   @ApiBody({ type: CreatePermissionDto })
   @ApiOkResponse({ description: 'Quyền đã được tạo.' })

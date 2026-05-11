@@ -57,26 +57,24 @@ export class CreatePermissionDto {
   @MaxLength(50)
   action!: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: 'POST',
     maxLength: 10,
-    description: 'HTTP method dùng để check quyền theo route runtime'
+    description: 'HTTP method bắt buộc để guard check quyền theo route runtime'
   })
-  @IsOptional()
   @IsString()
   @MaxLength(10)
-  method?: string;
+  method!: string;
 
-  @ApiPropertyOptional({
+  @ApiProperty({
     example: '/stations',
     maxLength: 255,
     description:
-      'Path route dùng để check quyền runtime, dùng format của controller như /roles/:id'
+      'Path route bắt buộc để guard check quyền runtime, dùng format của controller như /roles/:id'
   })
-  @IsOptional()
   @IsString()
   @MaxLength(255)
-  path?: string;
+  path!: string;
 
   @ApiProperty({
     enum: PermissionStatus,

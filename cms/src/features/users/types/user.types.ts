@@ -1,15 +1,13 @@
-import type { Role } from '@/features/access-control/types/accessControl.types'
 import type { components } from '@/lib/api/schema'
 
 export type UserType = 'CUSTOMER' | 'STAFF' | 'SYSTEM'
 export type UserStatus = 'ACTIVE' | 'INACTIVE' | 'LOCKED'
 
-export type UserRole = {
+export type UserRoleSummary = {
   id: string
-  userId: string
-  roleId: string
-  createdAt: string
-  role: Role
+  code: string
+  name: string
+  status: 'ACTIVE' | 'INACTIVE'
 }
 
 export type User = Record<string, unknown> & {
@@ -23,8 +21,23 @@ export type User = Record<string, unknown> & {
   createdAt: string
   updatedAt: string
   deletedAt: string | null
-  roles: UserRole[]
+  roles: UserRoleSummary[]
 }
 
 export type UserFormValues = components['schemas']['CreateUserDto']
 export type UpdateUserPayload = components['schemas']['UpdateUserDto']
+
+export type UserListQuery = {
+  page?: number
+  limit?: number
+  search?: string
+  userType?: UserType
+  status?: UserStatus
+}
+
+export type UserListMeta = {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+}

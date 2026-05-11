@@ -2,12 +2,24 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Prisma, RoleStatus, UserStatus } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { AppException } from '../../common/exceptions/app.exception';
+import { getPaginationOffset } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserQueryDto } from './dto/user-query.dto';
 
 type UserWithRoles = NonNullable<Awaited<ReturnType<UsersService['findById']>>>;
+const userInclude = {
+  roles: {
+    include: {
+      role: true
+    }
+  }
+} satisfies Prisma.UserInclude;
+
+type UserRecordWithRoles = Prisma.UserGetPayload<{
+  include: typeof userInclude;
+}>;
 
 @Injectable()
 export class UsersService {
@@ -19,7 +31,7 @@ export class UsersService {
     await this.ensureRolesExist(dto.roleIds);
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
-    const user = await this.prisma.user.create({
+    await this.prisma.user.create({
       data: {
         email: dto.email,
         phone: dto.phone,
@@ -34,12 +46,10 @@ export class UsersService {
               }))
             }
           : undefined
-      },
-      include: this.userInclude
+      }
     });
 
     return {
-      data: this.serializeUser(user),
       message: 'Tạo người dùng thành công'
     };
   }
@@ -66,7 +76,7 @@ export class UsersService {
         id,
         deletedAt: null
       },
-      include: this.userInclude
+      include: userInclude
     });
 
     if (!user) {
@@ -164,8 +174,8 @@ export class UsersService {
       ? await bcrypt.hash(dto.password, 12)
       : undefined;
 
-    const user = await this.prisma.$transaction(async (tx) => {
-      const updatedUser = await tx.user.update({
+    await this.prisma.$transaction(async (tx) => {
+      await tx.user.update({
         where: { id },
         data: {
           email: dto.email,
@@ -174,8 +184,7 @@ export class UsersService {
           passwordHash,
           userType: dto.userType,
           status: dto.status
-        },
-        include: this.userInclude
+        }
       });
 
       if (dto.roleIds !== undefined) {
@@ -193,15 +202,9 @@ export class UsersService {
           });
         }
       }
-
-      return tx.user.findUniqueOrThrow({
-        where: { id: updatedUser.id },
-        include: this.userInclude
-      });
     });
 
     return {
-      data: this.serializeUser(user),
       message: 'Cập nhật người dùng thành công'
     };
   }
@@ -241,26 +244,31 @@ export class UsersService {
           }
         : {})
     };
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
 
-    const users = await this.prisma.user.findMany({
-      where,
-      include: this.userInclude,
-      orderBy: [{ createdAt: 'desc' }]
-    });
+    const [users, total] = await this.prisma.$transaction([
+      this.prisma.user.findMany({
+        where,
+        include: userInclude,
+        orderBy: [{ createdAt: 'desc' }],
+        skip: getPaginationOffset(page, limit),
+        take: limit
+      }),
+      this.prisma.user.count({ where })
+    ]);
 
     return {
-      data: users.map((user) => this.serializeUser(user)),
+      data: users.map((user) => this.serializeUserSummary(user)),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      },
       message: 'Lấy danh sách người dùng thành công'
     };
   }
-
-  private readonly userInclude = {
-    roles: {
-      include: {
-        role: true
-      }
-    }
-  } satisfies Prisma.UserInclude;
 
   private isUserQueryDto(
     query?: UserQueryDto | Prisma.UserFindManyArgs
@@ -382,11 +390,29 @@ export class UsersService {
       updatedAt: user.updatedAt,
       deletedAt: user.deletedAt,
       roles: user.roles.map((userRole) => ({
-        id: userRole.id,
-        userId: userRole.userId,
-        roleId: userRole.roleId,
-        createdAt: userRole.createdAt,
-        role: userRole.role
+        id: userRole.role.id,
+        code: userRole.role.code,
+        name: userRole.role.name,
+        status: userRole.role.status
+      }))
+    };
+  }
+
+  private serializeUserSummary(user: UserRecordWithRoles) {
+    return {
+      id: user.id,
+      email: user.email,
+      phone: user.phone,
+      fullName: user.fullName,
+      userType: user.userType,
+      status: user.status,
+      lastLoginAt: user.lastLoginAt,
+      createdAt: user.createdAt,
+      roles: user.roles.map((userRole) => ({
+        id: userRole.role.id,
+        code: userRole.role.code,
+        name: userRole.role.name,
+        status: userRole.role.status
       }))
     };
   }

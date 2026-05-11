@@ -173,6 +173,28 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     }
 
+    if (modelName === 'User') {
+      const userMappings: Record<
+        string,
+        { code: string; message: string; details: string[] }
+      > = {
+        email: {
+          code: 'USER_EMAIL_DUPLICATED',
+          message: 'Email đã tồn tại',
+          details: ['Email đã tồn tại']
+        },
+        phone: {
+          code: 'USER_PHONE_DUPLICATED',
+          message: 'Số điện thoại đã tồn tại',
+          details: ['Số điện thoại đã tồn tại']
+        }
+      };
+      const userError = userMappings[target];
+      if (userError) {
+        return userError;
+      }
+    }
+
     const mappings: Record<
       string,
       { code: string; message: string; details: string[] }

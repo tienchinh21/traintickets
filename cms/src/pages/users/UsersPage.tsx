@@ -1,17 +1,30 @@
-import { EditOutlined, LockOutlined, PlusOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { App as AntApp, Button, Card, Form, Input, Modal, Select, Space, Tag } from 'antd'
+import { App as AntApp, Button, Card, Descriptions, Drawer, Form, Input, Modal, Result, Select, Space, Tag } from 'antd'
 import { useState } from 'react'
 import { accessControlApi } from '@/features/access-control/api/accessControlApi'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import { usersApi } from '@/features/users/api/usersApi'
-import type { UpdateUserPayload, User, UserFormValues, UserStatus, UserType } from '@/features/users/types/user.types'
-import { getApiErrorMessage } from '@/shared/api/errors'
+import type {
+  UpdateUserPayload,
+  User,
+  UserFormValues,
+  UserListQuery,
+  UserStatus,
+  UserType,
+} from '@/features/users/types/user.types'
+import { getApiError } from '@/shared/api/errors'
 import { PageHeader } from '@/shared/components/PageHeader'
 import { CoreTable, createActionColumn } from '@/shared/components/table'
 import type { ProColumns } from '@/shared/components/table'
 
 type UserFormModel = Omit<UserFormValues, 'password'> & {
   password?: string
+}
+
+const defaultUserQuery: Required<Pick<UserListQuery, 'page' | 'limit'>> = {
+  page: 1,
+  limit: 20,
 }
 
 const userTypeOptions: Array<{ label: string; value: UserType }> = [
@@ -38,92 +51,55 @@ const userStatusMeta: Record<UserStatus, { color: string; label: string }> = {
   LOCKED: { color: 'gold', label: 'Đã khóa' },
 }
 
-const columns: ProColumns<User>[] = [
-  {
-    title: 'Họ tên',
-    dataIndex: 'fullName',
-    width: 220,
-  },
-  {
-    title: 'Email',
-    dataIndex: 'email',
-    width: 240,
-    render: (_, record) => record.email || '-',
-  },
-  {
-    title: 'Số điện thoại',
-    dataIndex: 'phone',
-    width: 160,
-    render: (_, record) => record.phone || '-',
-  },
-  {
-    title: 'Loại người dùng',
-    dataIndex: 'userType',
-    width: 150,
-    render: (_, record) => {
-      const meta = userTypeMeta[record.userType]
-      return <Tag color={meta.color}>{meta.label}</Tag>
-    },
-  },
-  {
-    title: 'Vai trò',
-    dataIndex: 'roles',
-    width: 260,
-    render: (_, record) => (
-      <Space size={[0, 4]} wrap>
-        {record.roles.length
-          ? record.roles.map((userRole) => <Tag key={userRole.roleId}>{userRole.role.name}</Tag>)
-          : '-'}
-      </Space>
-    ),
-  },
-  {
-    title: 'Đăng nhập gần nhất',
-    dataIndex: 'lastLoginAt',
-    width: 190,
-    render: (_, record) => record.lastLoginAt ? new Date(record.lastLoginAt).toLocaleString('vi-VN') : '-',
-  },
-  {
-    title: 'Trạng thái',
-    dataIndex: 'status',
-    width: 150,
-    render: (_, record) => {
-      const meta = userStatusMeta[record.status]
-      return <Tag color={meta.color}>{meta.label}</Tag>
-    },
-  },
-]
+function formatDate(value?: string | null) {
+  return value ? new Date(value).toLocaleString('vi-VN') : '-'
+}
 
 function sanitizeUserPayload(values: UserFormModel, isEditing: boolean) {
   const payload: UpdateUserPayload = {
-    ...values,
     email: values.email?.trim() || undefined,
     phone: values.phone?.trim() || undefined,
     fullName: values.fullName?.trim(),
     password: values.password?.trim() || undefined,
+    userType: values.userType,
+    status: values.status,
+    roleIds: values.roleIds,
   }
 
   if (!isEditing) {
     return payload as UserFormValues
   }
 
-  return payload
+  return Object.fromEntries(
+    Object.entries(payload).filter(([, value]) => value !== undefined),
+  ) as UpdateUserPayload
 }
 
 export function UsersPage() {
-  const { message, modal } = AntApp.useApp()
+  const { message, modal, notification } = AntApp.useApp()
+  const { hasPermission } = useAuth()
   const queryClient = useQueryClient()
   const [form] = Form.useForm<UserFormModel>()
+  const [filterForm] = Form.useForm<Pick<UserListQuery, 'search' | 'userType' | 'status'>>()
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [viewingUser, setViewingUser] = useState<User | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [query, setQuery] = useState<UserListQuery>(defaultUserQuery)
+
+  const canRead = hasPermission('USERS_READ')
+  const canCreate = hasPermission('USERS_CREATE')
+  const canUpdate = hasPermission('USERS_UPDATE')
+  const canDelete = hasPermission('USERS_DELETE')
 
   const usersQuery = useQuery({
-    queryKey: ['users'],
-    queryFn: async () => (await usersApi.getUsers()).data,
+    queryKey: ['users', query],
+    enabled: canRead,
+    queryFn: async () => usersApi.getUsers(query),
   })
 
   const rolesQuery = useQuery({
     queryKey: ['roles'],
+    enabled: canCreate || canUpdate,
     queryFn: async () => (await accessControlApi.getRoles()).data,
   })
 
@@ -133,6 +109,90 @@ export function UsersPage() {
       label: `${role.code} - ${role.name}`,
       value: Number(role.id),
     }))
+
+  const columns: ProColumns<User>[] = [
+    {
+      title: 'Họ tên',
+      dataIndex: 'fullName',
+      width: 220,
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      width: 240,
+      render: (_, record) => record.email || '-',
+    },
+    {
+      title: 'Số điện thoại',
+      dataIndex: 'phone',
+      width: 160,
+      render: (_, record) => record.phone || '-',
+    },
+    {
+      title: 'Loại người dùng',
+      dataIndex: 'userType',
+      width: 150,
+      render: (_, record) => {
+        const meta = userTypeMeta[record.userType]
+        return <Tag color={meta.color}>{meta.label}</Tag>
+      },
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'status',
+      width: 150,
+      render: (_, record) => {
+        const meta = userStatusMeta[record.status]
+        return <Tag color={meta.color}>{meta.label}</Tag>
+      },
+    },
+    {
+      title: 'Vai trò',
+      dataIndex: 'roles',
+      width: 260,
+      render: (_, record) => (
+        <Space size={[0, 4]} wrap>
+          {record.roles.length ? record.roles.map((role) => <Tag key={role.id}>{role.name}</Tag>) : '-'}
+        </Space>
+      ),
+    },
+    {
+      title: 'Đăng nhập gần nhất',
+      dataIndex: 'lastLoginAt',
+      width: 190,
+      render: (_, record) => formatDate(record.lastLoginAt),
+    },
+    {
+      title: 'Ngày tạo',
+      dataIndex: 'createdAt',
+      width: 190,
+      render: (_, record) => formatDate(record.createdAt),
+    },
+  ]
+
+  const showApiError = (error: unknown, fallback: string) => {
+    const apiError = getApiError(error, fallback)
+    notification.error({
+      message: apiError.message,
+      description: apiError.details.length ? apiError.details.join('\n') : undefined,
+    })
+
+    const focusMap: Partial<Record<string, keyof UserFormModel>> = {
+      USER_EMAIL_DUPLICATED: 'email',
+      USER_PHONE_DUPLICATED: 'phone',
+      USER_CONTACT_REQUIRED: 'email',
+      USER_ROLE_NOT_FOUND: 'roleIds',
+    }
+    const focusField = focusMap[apiError.code]
+
+    if (focusField) {
+      form.scrollToField(focusField, { focus: true })
+    }
+
+    if (apiError.code === 'USER_ROLE_NOT_FOUND') {
+      void queryClient.invalidateQueries({ queryKey: ['roles'] })
+    }
+  }
 
   const saveUserMutation = useMutation({
     mutationFn: async (values: UserFormModel) => {
@@ -149,20 +209,21 @@ export function UsersPage() {
       form.resetFields()
       await queryClient.invalidateQueries({ queryKey: ['users'] })
     },
-    onError: (error) => message.error(getApiErrorMessage(error, 'Lưu người dùng thất bại')),
+    onError: (error) => showApiError(error, 'Lưu người dùng thất bại'),
   })
 
-  const lockUserMutation = useMutation({
-    mutationFn: (user: User) => usersApi.updateUser(user.id, { status: 'LOCKED' }),
+  const deleteUserMutation = useMutation({
+    mutationFn: usersApi.deleteUser,
     onSuccess: async (response) => {
       message.success(response.message)
       await queryClient.invalidateQueries({ queryKey: ['users'] })
     },
-    onError: (error) => message.error(getApiErrorMessage(error, 'Khóa người dùng thất bại')),
+    onError: (error) => showApiError(error, 'Xóa người dùng thất bại'),
   })
 
   const openCreateForm = () => {
     setEditingUser(null)
+    form.resetFields()
     form.setFieldsValue({
       userType: 'STAFF',
       status: 'ACTIVE',
@@ -179,39 +240,72 @@ export function UsersPage() {
       fullName: user.fullName,
       userType: user.userType,
       status: user.status,
-      roleIds: user.roles.map((userRole) => Number(userRole.roleId)),
+      roleIds: user.roles.map((role) => Number(role.id)),
       password: undefined,
     })
     setIsFormOpen(true)
   }
 
-  const confirmLock = (user: User) => {
+  const confirmDelete = (user: User) => {
     modal.confirm({
-      title: 'Khóa người dùng?',
-      content: `Tài khoản ${user.fullName} sẽ không thể đăng nhập cho tới khi được mở lại.`,
-      okText: 'Khóa tài khoản',
+      title: 'Xóa người dùng?',
+      content: `Tài khoản ${user.fullName} sẽ bị xóa mềm và không còn xuất hiện trong danh sách.`,
+      okText: 'Xóa người dùng',
       okButtonProps: { danger: true },
       cancelText: 'Hủy',
-      onOk: () => lockUserMutation.mutateAsync(user),
+      onOk: () => deleteUserMutation.mutateAsync(user.id),
     })
+  }
+
+  const handleFilter = (values: Pick<UserListQuery, 'search' | 'userType' | 'status'>) => {
+    setQuery({
+      ...defaultUserQuery,
+      search: values.search?.trim() || undefined,
+      userType: values.userType,
+      status: values.status,
+    })
+  }
+
+  const resetFilter = () => {
+    filterForm.resetFields()
+    setQuery(defaultUserQuery)
   }
 
   const actionColumn = createActionColumn<User>((record) => [
     {
-      key: 'edit',
-      icon: <EditOutlined />,
-      tooltip: 'Sửa người dùng',
-      onClick: () => openEditForm(record),
+      key: 'view',
+      icon: <EyeOutlined />,
+      tooltip: 'Xem chi tiết',
+      onClick: () => setViewingUser(record),
     },
-    {
-      key: 'lock',
-      icon: <LockOutlined />,
-      tooltip: 'Khóa người dùng',
-      danger: true,
-      disabled: record.status === 'LOCKED',
-      onClick: () => confirmLock(record),
-    },
+    ...(canUpdate
+      ? [{
+          key: 'edit',
+          icon: <EditOutlined />,
+          tooltip: 'Sửa người dùng',
+          onClick: () => openEditForm(record),
+        }]
+      : []),
+    ...(canDelete
+      ? [{
+          key: 'delete',
+          icon: <DeleteOutlined />,
+          tooltip: 'Xóa người dùng',
+          danger: true,
+          onClick: () => confirmDelete(record),
+        }]
+      : []),
   ], 136)
+
+  if (!canRead) {
+    return (
+      <Result
+        status="403"
+        title="Không có quyền truy cập"
+        subTitle="Bạn cần quyền USERS_READ để xem danh sách người dùng."
+      />
+    )
+  }
 
   return (
     <>
@@ -219,17 +313,46 @@ export function UsersPage() {
         title="Người dùng"
         description="Quản lý tài khoản nội bộ, khách hàng và vai trò truy cập CMS."
         extra={
-          <Button type="primary" icon={<PlusOutlined />} onClick={openCreateForm}>
-            Thêm người dùng
-          </Button>
+          canCreate ? (
+            <Button type="primary" icon={<PlusOutlined />} onClick={openCreateForm}>
+              Thêm người dùng
+            </Button>
+          ) : null
         }
       />
 
       <Card>
+        <Form form={filterForm} layout="inline" className="table-filter-bar" onFinish={handleFilter}>
+          <Form.Item name="search">
+            <Input.Search allowClear placeholder="Tìm họ tên, email, số điện thoại" onSearch={() => filterForm.submit()} />
+          </Form.Item>
+          <Form.Item name="userType">
+            <Select allowClear options={userTypeOptions} placeholder="Loại người dùng" style={{ width: 180 }} />
+          </Form.Item>
+          <Form.Item name="status">
+            <Select allowClear options={userStatusOptions} placeholder="Trạng thái" style={{ width: 180 }} />
+          </Form.Item>
+          <Form.Item>
+            <Space>
+              <Button type="primary" htmlType="submit">
+                Lọc
+              </Button>
+              <Button onClick={resetFilter}>Đặt lại</Button>
+            </Space>
+          </Form.Item>
+        </Form>
+
         <CoreTable<User>
           columns={[...columns, actionColumn]}
-          dataSource={usersQuery.data ?? []}
+          dataSource={usersQuery.data?.data ?? []}
           loading={usersQuery.isLoading}
+          pagination={{
+            current: usersQuery.data?.meta.page ?? query.page,
+            pageSize: usersQuery.data?.meta.limit ?? query.limit,
+            total: usersQuery.data?.meta.total ?? 0,
+            showSizeChanger: true,
+            onChange: (page, limit) => setQuery((current) => ({ ...current, page, limit })),
+          }}
         />
       </Card>
 
@@ -292,6 +415,39 @@ export function UsersPage() {
           </Form.Item>
         </Form>
       </Modal>
+
+      <Drawer
+        title="Chi tiết người dùng"
+        open={Boolean(viewingUser)}
+        width={620}
+        onClose={() => setViewingUser(null)}
+      >
+        {viewingUser && (
+          <Descriptions column={1} bordered size="small">
+            <Descriptions.Item label="Họ tên">{viewingUser.fullName}</Descriptions.Item>
+            <Descriptions.Item label="Email">{viewingUser.email || '-'}</Descriptions.Item>
+            <Descriptions.Item label="Số điện thoại">{viewingUser.phone || '-'}</Descriptions.Item>
+            <Descriptions.Item label="Loại người dùng">
+              <Tag color={userTypeMeta[viewingUser.userType].color}>
+                {userTypeMeta[viewingUser.userType].label}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Trạng thái">
+              <Tag color={userStatusMeta[viewingUser.status].color}>
+                {userStatusMeta[viewingUser.status].label}
+              </Tag>
+            </Descriptions.Item>
+            <Descriptions.Item label="Vai trò">
+              <Space size={[0, 4]} wrap>
+                {viewingUser.roles.length ? viewingUser.roles.map((role) => <Tag key={role.id}>{role.name}</Tag>) : '-'}
+              </Space>
+            </Descriptions.Item>
+            <Descriptions.Item label="Đăng nhập gần nhất">{formatDate(viewingUser.lastLoginAt)}</Descriptions.Item>
+            <Descriptions.Item label="Ngày tạo">{formatDate(viewingUser.createdAt)}</Descriptions.Item>
+            <Descriptions.Item label="Ngày cập nhật">{formatDate(viewingUser.updatedAt)}</Descriptions.Item>
+          </Descriptions>
+        )}
+      </Drawer>
     </>
   )
 }

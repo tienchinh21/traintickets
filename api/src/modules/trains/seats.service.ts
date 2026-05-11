@@ -97,7 +97,13 @@ export class SeatsService {
     const seat = await this.prisma.seat.findFirst({
       where: {
         id,
-        deletedAt: null
+        deletedAt: null,
+        carriage: {
+          deletedAt: null,
+          train: {
+            deletedAt: null
+          }
+        }
       },
       include: seatInclude
     });
@@ -157,7 +163,10 @@ export class SeatsService {
     const carriage = await this.prisma.carriage.findFirst({
       where: {
         id: carriageId,
-        deletedAt: null
+        deletedAt: null,
+        train: {
+          deletedAt: null
+        }
       },
       select: {
         id: true
@@ -181,7 +190,10 @@ export class SeatsService {
     const carriage = await this.prisma.carriage.findFirst({
       where: {
         id: carriageId,
-        deletedAt: null
+        deletedAt: null,
+        train: {
+          deletedAt: null
+        }
       },
       select: {
         id: true,
@@ -253,7 +265,13 @@ export class SeatsService {
     const seat = await this.prisma.seat.findFirst({
       where: {
         id,
-        deletedAt: null
+        deletedAt: null,
+        carriage: {
+          deletedAt: null,
+          train: {
+            deletedAt: null
+          }
+        }
       },
       select: {
         id: true,

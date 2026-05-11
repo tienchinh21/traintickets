@@ -109,7 +109,10 @@ export class CarriagesService {
     const carriage = await this.prisma.carriage.findFirst({
       where: {
         id,
-        deletedAt: null
+        deletedAt: null,
+        train: {
+          deletedAt: null
+        }
       },
       include: carriageDetailInclude
     });
@@ -196,7 +199,10 @@ export class CarriagesService {
     const carriage = await this.prisma.carriage.findFirst({
       where: {
         id,
-        deletedAt: null
+        deletedAt: null,
+        train: {
+          deletedAt: null
+        }
       },
       include: {
         train: {

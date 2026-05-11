@@ -33,13 +33,13 @@ export interface paths {
         };
         /**
          * Danh sách người dùng
-         * @description Lấy danh sách người dùng kèm vai trò. Hỗ trợ tìm theo họ tên, email hoặc số điện thoại.
+         * @description Lấy danh sách người dùng summary kèm vai trò ngắn gọn. Hỗ trợ tìm theo họ tên, email hoặc số điện thoại. Yêu cầu permission USERS_READ.
          */
         get: operations["UsersController_findMany"];
         put?: never;
         /**
          * Tạo người dùng
-         * @description Tạo tài khoản người dùng CMS hoặc khách hàng. BE tự hash password và gán roleIds nếu có.
+         * @description Tạo tài khoản người dùng CMS hoặc khách hàng. BE tự hash password và gán roleIds nếu có. Yêu cầu permission USERS_CREATE.
          */
         post: operations["UsersController_create"];
         delete?: never;
@@ -57,7 +57,7 @@ export interface paths {
         };
         /**
          * Chi tiết người dùng
-         * @description Lấy chi tiết người dùng kèm danh sách vai trò.
+         * @description Lấy chi tiết người dùng kèm danh sách vai trò. Yêu cầu permission USERS_READ.
          */
         get: operations["UsersController_findById"];
         put?: never;
@@ -71,7 +71,7 @@ export interface paths {
         head?: never;
         /**
          * Cập nhật người dùng
-         * @description Cập nhật thông tin tài khoản, trạng thái, mật khẩu và danh sách vai trò.
+         * @description Cập nhật thông tin tài khoản, trạng thái, mật khẩu và danh sách vai trò. Mutate endpoint chỉ trả message.
          */
         patch: operations["UsersController_update"];
         trace?: never;
@@ -1448,6 +1448,10 @@ export interface operations {
     UsersController_findMany: {
         parameters: {
             query?: {
+                /** @description Trang hiện tại */
+                page?: number;
+                /** @description Số bản ghi mỗi trang, tối đa 100 */
+                limit?: number;
                 /** @description Tìm theo họ tên, email hoặc số điện thoại */
                 search?: string;
                 /** @description Lọc theo loại người dùng */
@@ -1463,6 +1467,20 @@ export interface operations {
         responses: {
             /** @description Danh sách người dùng. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Thiếu hoặc sai access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User không có permission USERS_READ. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -1511,7 +1529,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description ID người dùng */
+                /** @description UUID người dùng */
                 id: string;
             };
             cookie?: never;
@@ -1525,6 +1543,20 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Thiếu hoặc sai access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User không có permission USERS_READ. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     UsersController_delete: {
@@ -1532,7 +1564,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description ID người dùng */
+                /** @description UUID người dùng */
                 id: string;
             };
             cookie?: never;
@@ -1546,6 +1578,20 @@ export interface operations {
                 };
                 content?: never;
             };
+            /** @description Thiếu hoặc sai access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User không có permission USERS_DELETE. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
         };
     };
     UsersController_update: {
@@ -1553,7 +1599,7 @@ export interface operations {
             query?: never;
             header?: never;
             path: {
-                /** @description ID người dùng */
+                /** @description UUID người dùng */
                 id: string;
             };
             cookie?: never;
@@ -1566,6 +1612,20 @@ export interface operations {
         responses: {
             /** @description Người dùng đã được cập nhật. */
             200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Thiếu hoặc sai access token. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description User không có permission USERS_UPDATE. */
+            403: {
                 headers: {
                     [name: string]: unknown;
                 };

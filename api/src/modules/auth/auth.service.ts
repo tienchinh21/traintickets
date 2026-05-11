@@ -50,9 +50,21 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
-    const customerRole = await this.prisma.role.findUnique({
-      where: { code: 'CUSTOMER' }
+    const customerRole = await this.prisma.role.findFirst({
+      where: {
+        code: 'CUSTOMER',
+        status: RoleStatus.ACTIVE
+      }
     });
+
+    if (!customerRole) {
+      throw new AppException(
+        'USER_ROLE_NOT_FOUND',
+        'Vai trò khách hàng chưa được cấu hình',
+        500,
+        ['Không tìm thấy vai trò CUSTOMER đang hoạt động']
+      );
+    }
 
     const user = await this.prisma.user.create({
       data: {
@@ -62,13 +74,11 @@ export class AuthService {
         passwordHash,
         userType: UserType.CUSTOMER,
         status: UserStatus.ACTIVE,
-        roles: customerRole
-          ? {
-              create: {
-                roleId: customerRole.id
-              }
-            }
-          : undefined
+        roles: {
+          create: {
+            roleId: customerRole.id
+          }
+        }
       }
     });
 

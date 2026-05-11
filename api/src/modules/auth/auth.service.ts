@@ -208,8 +208,11 @@ export class AuthService {
   }
 
   revokeRefreshToken(tokenHash: string) {
-    return this.prisma.refreshToken.update({
-      where: { tokenHash },
+    return this.prisma.refreshToken.updateMany({
+      where: {
+        tokenHash,
+        revokedAt: null
+      },
       data: {
         revokedAt: new Date()
       }

@@ -1,0 +1,40 @@
+CREATE TABLE `trips` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `route_id` CHAR(36) NOT NULL,
+  `train_id` CHAR(36) NOT NULL,
+  `code` VARCHAR(50) NOT NULL,
+  `service_date` DATE NOT NULL,
+  `status` ENUM('DRAFT', 'OPEN', 'CLOSED', 'CANCELLED') NOT NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  `deleted_at` DATETIME(3) NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `trips_code_key` (`code`),
+  KEY `trips_route_id_service_date_idx` (`route_id`, `service_date`),
+  KEY `trips_train_id_service_date_idx` (`train_id`, `service_date`),
+  KEY `trips_status_idx` (`status`),
+  CONSTRAINT `trips_route_id_fkey` FOREIGN KEY (`route_id`) REFERENCES `routes`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `trips_train_id_fkey` FOREIGN KEY (`train_id`) REFERENCES `trains`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+
+CREATE TABLE `trip_stops` (
+  `id` CHAR(36) NOT NULL DEFAULT (UUID()),
+  `trip_id` CHAR(36) NOT NULL,
+  `station_id` CHAR(36) NOT NULL,
+  `stop_order` INT UNSIGNED NOT NULL,
+  `scheduled_arrival_at` DATETIME(3) NULL,
+  `scheduled_departure_at` DATETIME(3) NULL,
+  `actual_arrival_at` DATETIME(3) NULL,
+  `actual_departure_at` DATETIME(3) NULL,
+  `distance_from_start_km` DECIMAL(8, 2) NOT NULL,
+  `created_at` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+  `updated_at` DATETIME(3) NOT NULL,
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `trip_stops_trip_id_stop_order_key` (`trip_id`, `stop_order`),
+  UNIQUE KEY `trip_stops_trip_id_station_id_key` (`trip_id`, `station_id`),
+  KEY `trip_stops_station_id_idx` (`station_id`),
+  KEY `trip_stops_scheduled_departure_at_idx` (`scheduled_departure_at`),
+  KEY `trip_stops_scheduled_arrival_at_idx` (`scheduled_arrival_at`),
+  CONSTRAINT `trip_stops_trip_id_fkey` FOREIGN KEY (`trip_id`) REFERENCES `trips`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT `trip_stops_station_id_fkey` FOREIGN KEY (`station_id`) REFERENCES `stations`(`id`) ON DELETE RESTRICT ON UPDATE CASCADE
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;

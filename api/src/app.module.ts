@@ -14,6 +14,7 @@ import { PermissionsModule } from './modules/permissions/permissions.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { RoutesModule } from './modules/routes/routes.module';
 import { StationsModule } from './modules/stations/stations.module';
+import { TripsModule } from './modules/trips/trips.module';
 import { TrainsModule } from './modules/trains/trains.module';
 import { UsersModule } from './modules/users/users.module';
 
@@ -35,6 +36,7 @@ import { UsersModule } from './modules/users/users.module';
     PermissionsModule,
     StationsModule,
     RoutesModule,
+    TripsModule,
     TrainsModule
   ]
 })

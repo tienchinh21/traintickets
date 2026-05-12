@@ -1,6 +1,6 @@
 "use client";
 
-import { BusFront, CalendarDays, CarFront, MapPin, Plane, Plus, Repeat2, TrainFront } from "lucide-react";
+import { BadgePercent, BusFront, CalendarDays, CarFront, MapPin, Plane, Plus, Repeat2, Sparkles, TrainFront } from "lucide-react";
 import { motion, useScroll, useTransform } from "motion/react";
 import Link from "next/link";
 
@@ -8,53 +8,76 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { benefits } from "./data";
 
+const benefitDescriptions = ["Giữ ghế ngay sau khi đặt", "Luôn có người hỗ trợ", "Deal mới mỗi tuần", "Thẻ, ví và chuyển khoản"];
+
 export function HeroSection() {
   const { scrollYProgress } = useScroll();
   const heroTextY = useTransform(scrollYProgress, [0, 0.25], [0, -70]);
   const heroBgY = useTransform(scrollYProgress, [0, 0.25], [0, 45]);
 
   return (
-    <section className="relative h-[650px] overflow-hidden border-y bg-[#bfefff]">
+    <section className="relative h-[690px] overflow-hidden border-y bg-[#9fe4ff]">
       <motion.div
-        className="absolute inset-0 bg-[radial-gradient(circle_at_50%_10%,#ffffff_0,#b9edff_38%,#6fd0ff_100%)]"
+        className="absolute inset-0 bg-[linear-gradient(180deg,#effcff_0%,#9fe4ff_42%,#5fc4ff_100%)]"
         style={{ y: heroBgY }}
       />
-      <div className="absolute left-0 top-0 h-full w-[32%] bg-[radial-gradient(circle_at_30%_55%,#fff7b8_0,#fcd34d_12%,transparent_30%)] opacity-80" />
-      <div className="absolute right-0 bottom-0 h-full w-[38%] bg-[radial-gradient(circle_at_75%_65%,#fff7b8_0,#facc15_10%,transparent_32%)] opacity-80" />
+      <div className="absolute inset-0 bg-[linear-gradient(115deg,rgba(255,255,255,0.72)_0_18%,transparent_18%_34%,rgba(255,255,255,0.34)_34%_42%,transparent_42%)]" />
+      <div className="absolute left-[-8%] top-10 h-64 w-[46%] -skew-x-12 rounded-[38px] bg-[#fff3a3]/65 blur-[1px]" />
+      <div className="absolute right-[-10%] top-24 h-72 w-[44%] skew-x-12 rounded-[38px] bg-[#ffcf4a]/55 blur-[1px]" />
+      <SkylineLayer />
 
       <motion.div
-        className="absolute inset-x-0 top-7 z-0 text-center"
+        className="absolute inset-x-0 top-9 z-[2] px-5 text-center"
         initial={{ opacity: 0, y: 18 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.7, ease: "easeOut" }}
         style={{ y: heroTextY }}
       >
         <motion.div
-          className="inline-flex rotate-[-3deg] items-center rounded-xl bg-white px-8 py-2 text-xl font-black text-primary shadow-md"
+          className="inline-flex rotate-[-3deg] items-center gap-2 rounded-xl border-2 border-white bg-[#083f67] px-6 py-2 text-base font-black uppercase tracking-[0.18em] text-accent-cta shadow-[0_14px_30px_rgba(8,63,103,0.25)]"
           animate={{ rotate: [-3, -1.5, -3], y: [0, -4, 0] }}
           transition={{ duration: 3.6, repeat: Infinity, ease: "easeInOut" }}
         >
+          <Sparkles className="size-5" />
           THỨ 3 · 12h đến 14h
         </motion.div>
-        <div className="mx-auto mt-3 w-fit rounded-xl bg-primary px-10 py-2 text-2xl font-black text-white shadow-lg">
-          NGÀY SĂN HẠ GIÁ VÉ
+        <div className="mx-auto mt-4 flex w-fit items-end gap-4 rounded-[22px] border-4 border-white bg-primary px-8 py-3 text-white shadow-[0_20px_0_#083f67,0_32px_50px_rgba(8,63,103,0.24)]">
+          <div className="text-left">
+            <div className="text-2xl font-black leading-none md:text-4xl">NGÀY SĂN</div>
+            <div className="text-2xl font-black leading-none text-accent-cta md:text-4xl">HẠ GIÁ VÉ</div>
+          </div>
+          <div className="flex items-start text-[58px] font-black leading-[0.86] text-white [text-shadow:4px_4px_0_#ef555b] md:text-[86px]">
+            50<span className="mt-2 text-3xl md:text-5xl">%</span>
+          </div>
         </div>
-        <div className="mt-2 text-3xl font-black text-orange-500 [text-shadow:2px_2px_0_#fff]">HẠ ĐẸP ĐẾN 50%</div>
+        <div className="mx-auto mt-5 flex w-fit items-center gap-2 rounded-full bg-white/92 px-5 py-2 text-sm font-extrabold text-[#083f67] shadow-md">
+          <BadgePercent className="size-5 text-[#ef555b]" />
+          Flash deal cho tuyến xe khách, tàu hỏa và máy bay
+        </div>
       </motion.div>
 
-      <FloatingTag className="left-[18%] top-[170px]" text="20%" />
-      <FloatingTag className="right-[16%] top-[160px]" delay={0.8} text="50%" />
-      <FloatingTag className="right-[9%] top-[250px]" delay={1.4} text="-30k" />
+      <FloatingTag className="left-[13%] top-[210px]" text="-20%" />
+      <FloatingTag className="right-[14%] top-[205px]" delay={0.8} text="-50%" />
+      <FloatingTag className="right-[8%] top-[310px]" delay={1.4} text="-30k" />
       <RoadLayer />
       <AnimatedBus />
 
-      <div className="absolute left-12 bottom-16 hidden w-52 rounded-3xl bg-white/70 p-4 shadow-xl lg:block">
-        <div className="h-40 rounded-2xl bg-gradient-to-br from-yellow-300 to-orange-400" />
+      <div className="absolute left-12 bottom-[138px] z-[2] hidden w-56 rotate-[-4deg] rounded-2xl border-2 border-white bg-white/86 p-4 shadow-[0_20px_38px_rgba(8,63,103,0.22)] lg:block">
+        <div className="rounded-xl bg-[#ef555b] px-4 py-3 text-white">
+          <div className="text-xs font-black uppercase tracking-[0.18em] text-white/75">Deal giờ vàng</div>
+          <div className="mt-2 text-3xl font-black">12:00</div>
+        </div>
+        <div className="mt-3 h-3 rounded-full bg-slate-200" />
+        <div className="mt-2 h-3 w-3/4 rounded-full bg-slate-200" />
       </div>
-      <div className="absolute right-20 bottom-20 hidden size-36 rounded-[2rem] bg-gradient-to-br from-primary to-sky-400 shadow-xl lg:block" />
+      <div className="absolute right-20 bottom-[142px] z-[2] hidden w-48 rotate-6 rounded-2xl border-2 border-white bg-[#083f67] p-4 text-white shadow-[0_20px_38px_rgba(8,63,103,0.24)] lg:block">
+        <div className="text-xs font-black uppercase tracking-[0.18em] text-accent-cta">Voucher</div>
+        <div className="mt-3 text-4xl font-black">-30k</div>
+        <div className="mt-3 h-2 rounded-full bg-white/20" />
+      </div>
 
       <motion.div
-        className="relative z-10 mx-auto flex w-full max-w-[1110px] px-5 pt-[220px]"
+        className="relative z-10 mx-auto flex w-full max-w-[1110px] px-5 pt-[330px]"
         initial={{ opacity: 0, y: 34, scale: 0.985 }}
         animate={{ opacity: 1, y: 0, scale: 1 }}
         transition={{ delay: 0.18, duration: 0.62, ease: "easeOut" }}
@@ -62,15 +85,23 @@ export function HeroSection() {
         <SearchCard />
       </motion.div>
 
-      <div className="absolute inset-x-0 bottom-0 z-[5] bg-[#083f67]/88 pb-5 pt-2 text-white">
-        <div className="mx-auto grid max-w-[760px] grid-cols-4 gap-6 px-5">
-          {benefits.map((benefit) => {
+      <div className="absolute inset-x-0 bottom-0 z-[5] border-t-2 border-accent-cta/80 bg-[linear-gradient(90deg,#0f6ba8_0%,#2563eb_48%,#083f67_100%)] px-5 py-4 text-white shadow-[0_-16px_34px_rgba(8,63,103,0.2)]">
+        <div className="mx-auto grid max-w-[980px] grid-cols-2 gap-3 md:grid-cols-4">
+          {benefits.map((benefit, index) => {
             const Icon = benefit.icon;
 
             return (
-              <div className="flex items-center gap-3" key={benefit.title}>
-                <Icon className="size-5 text-accent-cta" />
-                <span className="text-sm font-semibold">{benefit.title}</span>
+              <div
+                className="group flex items-center gap-3 rounded-2xl border border-white/20 bg-white/[0.13] px-4 py-3 shadow-[inset_0_1px_0_rgba(255,255,255,0.18),0_10px_24px_rgba(8,63,103,0.12)] transition hover:-translate-y-0.5 hover:bg-white/[0.18]"
+                key={benefit.title}
+              >
+                <span className="flex size-11 shrink-0 items-center justify-center rounded-xl bg-white text-primary shadow-[0_8px_18px_rgba(255,255,255,0.18)] ring-2 ring-accent-cta/70">
+                  <Icon className="size-5" />
+                </span>
+                <span className="min-w-0">
+                  <span className="block text-sm font-black leading-tight">{benefit.title}</span>
+                  <span className="mt-1 block text-xs font-semibold leading-tight text-white/72">{benefitDescriptions[index]}</span>
+                </span>
               </div>
             );
           })}
@@ -82,16 +113,16 @@ export function HeroSection() {
 
 function SearchCard() {
   return (
-    <Card className="w-full overflow-hidden rounded-2xl border border-slate-200 bg-white py-0 shadow-[0_18px_42px_rgba(15,23,42,0.18)]">
+    <Card className="w-full overflow-hidden rounded-2xl border-2 border-white bg-white/96 py-0 shadow-[0_26px_60px_rgba(8,63,103,0.28)] backdrop-blur">
       <CardHeader className="border-b px-0 py-0">
         <div className="grid h-[72px] grid-cols-[1.18fr_1.05fr_1fr_1fr_1fr] items-stretch">
-          <button className="flex items-center gap-3 px-6 text-[16px] font-semibold text-[#404040]" type="button">
-            <span className="relative flex h-7 w-11 items-center rounded-full bg-[#34c759] p-1">
+          <button className="flex items-center gap-3 bg-[#f8fbff] px-6 text-[16px] font-semibold text-[#404040]" type="button">
+            <span className="relative flex h-7 w-11 items-center rounded-full bg-[#34c759] p-1 shadow-inner">
               <span className="ml-auto size-5 rounded-full bg-white shadow-sm" />
             </span>
             Địa chỉ mới
           </button>
-          <button className="relative flex items-center justify-center gap-3 border-b-[3px] border-primary text-[18px] font-bold text-primary" type="button">
+          <button className="relative flex items-center justify-center gap-3 border-b-[4px] border-accent-cta bg-primary text-[18px] font-bold text-white" type="button">
             <BusFront className="size-6" />
             Xe khách
           </button>
@@ -122,7 +153,11 @@ function SearchCard() {
               <span className="text-[16px] font-bold leading-tight">Thêm ngày về</span>
             </button>
           </div>
-          <Button className="h-[64px] rounded-lg bg-accent-cta text-[20px] font-bold text-[#201a00] hover:bg-accent-cta/90" render={<Link href="/search" />}>
+          <Button
+            className="h-[64px] rounded-lg bg-accent-cta text-[20px] font-black text-[#201a00] shadow-[0_8px_0_#d99b00] hover:bg-accent-cta/90"
+            nativeButton={false}
+            render={<Link href="/search" />}
+          >
             Tìm kiếm
           </Button>
         </div>
@@ -176,7 +211,7 @@ function BusSearchSegment({
 function FloatingTag({ text, className, delay = 0 }: { text: string; className: string; delay?: number }) {
   return (
     <motion.div
-      className={`absolute z-[1] rounded-lg bg-white/85 px-3 py-1.5 text-sm font-black text-primary shadow-md ${className}`}
+      className={`absolute z-[3] border-2 border-dashed border-[#083f67]/30 bg-white/90 px-4 py-2 text-lg font-black text-[#ef555b] shadow-[0_12px_24px_rgba(8,63,103,0.2)] ${className}`}
       animate={{ y: [0, -12, 0], rotate: [-4, 5, -4] }}
       transition={{ duration: 4.2, repeat: Infinity, ease: "easeInOut", delay }}
     >
@@ -188,7 +223,7 @@ function FloatingTag({ text, className, delay = 0 }: { text: string; className: 
 function AnimatedBus() {
   return (
     <div
-      className="bus-drive absolute bottom-[92px] left-[-280px] z-[6] hidden md:block"
+      className="bus-drive absolute bottom-[124px] left-[-280px] z-[6] hidden md:block"
       aria-hidden="true"
     >
       <div className="relative h-[92px] w-[240px]">
@@ -211,11 +246,24 @@ function AnimatedBus() {
 
 function RoadLayer() {
   return (
-    <div className="absolute inset-x-0 bottom-[46px] z-[3] hidden h-[92px] overflow-hidden md:block" aria-hidden="true">
+    <div className="absolute inset-x-0 bottom-[104px] z-[3] hidden h-[100px] overflow-hidden md:block" aria-hidden="true">
       <div className="absolute inset-x-0 bottom-0 h-[66px] bg-[#9aa7b3]" />
       <div className="absolute inset-x-0 bottom-[54px] h-[13px] bg-[#c7d0d8]" />
       <div className="absolute inset-x-0 bottom-[39px] h-px bg-white/45" />
       <div className="road-markers absolute inset-x-0 bottom-[27px] h-[4px]" />
+    </div>
+  );
+}
+
+function SkylineLayer() {
+  return (
+    <div className="absolute inset-x-0 bottom-[150px] z-[1] hidden h-32 opacity-55 md:block" aria-hidden="true">
+      <div className="absolute bottom-0 left-[6%] h-20 w-16 rounded-t-xl bg-[#1d7fbc]/45" />
+      <div className="absolute bottom-0 left-[14%] h-28 w-24 rounded-t-2xl bg-[#0f6ba8]/45" />
+      <div className="absolute bottom-0 left-[25%] h-16 w-28 rounded-t-xl bg-[#1d7fbc]/40" />
+      <div className="absolute bottom-0 right-[26%] h-24 w-24 rounded-t-2xl bg-[#0f6ba8]/42" />
+      <div className="absolute bottom-0 right-[14%] h-32 w-20 rounded-t-xl bg-[#1d7fbc]/45" />
+      <div className="absolute bottom-0 right-[5%] h-20 w-28 rounded-t-2xl bg-[#0f6ba8]/38" />
     </div>
   );
 }

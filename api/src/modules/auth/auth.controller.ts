@@ -47,9 +47,9 @@ export class AuthController {
 
   @Post('login')
   @ApiOperation({
-    summary: 'Đăng nhập',
+    summary: 'Đăng nhập hệ thống CMS',
     description:
-      'Đăng nhập bằng email hoặc số điện thoại. Token chỉ chứa identity; quyền được check runtime từ DB.'
+      'Đăng nhập bằng email hoặc số điện thoại cho tài khoản nội bộ. Tài khoản CUSTOMER không được phép đăng nhập hệ thống CMS. Token chỉ chứa identity; quyền được check runtime từ DB.'
   })
   @ApiBody({ type: LoginDto })
   @ApiOkResponse({

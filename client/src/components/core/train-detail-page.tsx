@@ -25,9 +25,9 @@ export function TrainDetailPage({ trainId }: { trainId: string }) {
             <Badge variant="secondary" className="w-fit">
               {journey.operator}
             </Badge>
-            <h1 className="text-3xl font-bold tracking-normal">{journey.code} Express detail</h1>
+            <h1 className="text-3xl font-bold tracking-normal">Chi tiết chuyến {journey.code}</h1>
             <p className="text-muted-foreground">
-              {journey.from.name} to {journey.to.name} · {journey.duration} · {journey.distance}
+              {journey.from.name} đến {journey.to.name} · {journey.duration} · {journey.distance}
             </p>
           </div>
           <div className="rounded-xl border bg-card p-4">

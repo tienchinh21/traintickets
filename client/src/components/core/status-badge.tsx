@@ -4,9 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import type { TrainStatus } from "@/types/train";
 
 const statusCopy: Record<TrainStatus, string> = {
-  available: "Available",
-  limited: "Limited",
-  "sold-out": "Sold out",
+  available: "Còn chỗ",
+  limited: "Sắp hết",
+  "sold-out": "Hết vé",
 };
 
 const statusIcon = {

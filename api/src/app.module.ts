@@ -7,6 +7,7 @@ import queueConfig from './config/queue.config';
 import redisConfig from './config/redis.config';
 import { PrismaModule } from './database/prisma/prisma.module';
 import { HealthModule } from './health/health.module';
+import { AdministrativeDivisionsModule } from './modules/administrative-divisions/administrative-divisions.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
@@ -26,6 +27,7 @@ import { UsersModule } from './modules/users/users.module';
     }),
     PrismaModule,
     HealthModule,
+    AdministrativeDivisionsModule,
     UsersModule,
     AuthModule,
     AuditLogsModule,

@@ -26,14 +26,14 @@ export function TrainDetailPanel({ journey }: { journey?: TrainJourney }) {
       <CardHeader>
         <CardTitle className="flex items-center gap-2">
           <TrainTrack className="size-5 text-primary" />
-          {selectedTrain.code} detail
+          Chi tiết {selectedTrain.code}
         </CardTitle>
       </CardHeader>
       <CardContent>
         <Tabs defaultValue="fares">
           <TabsList>
-            <TabsTrigger value="fares">Fares</TabsTrigger>
-            <TabsTrigger value="route">Route</TabsTrigger>
+            <TabsTrigger value="fares">Giá vé</TabsTrigger>
+            <TabsTrigger value="route">Lộ trình</TabsTrigger>
           </TabsList>
           <TabsContent value="fares" className="mt-4">
             <div className="grid gap-3">
@@ -56,7 +56,7 @@ export function TrainDetailPanel({ journey }: { journey?: TrainJourney }) {
                       </span>
                       <span className="flex flex-col gap-1">
                         <span className="font-medium">{fare.label}</span>
-                        <span className="text-xs text-muted-foreground">{fare.remaining} seats remaining</span>
+                        <span className="text-xs text-muted-foreground">Còn {fare.remaining} chỗ</span>
                       </span>
                     </span>
                     <span className="font-semibold">{formatCurrency(fare.price)}</span>
@@ -71,7 +71,7 @@ export function TrainDetailPanel({ journey }: { journey?: TrainJourney }) {
         </Tabs>
         <div className="mt-4 rounded-xl bg-success-soft p-3 text-sm text-green-900">
           <ShieldCheck className="mr-2 inline size-4" />
-          Ticket can be held for 15 minutes during checkout.
+          Vé có thể được giữ trong 15 phút khi thanh toán.
         </div>
       </CardContent>
     </Card>

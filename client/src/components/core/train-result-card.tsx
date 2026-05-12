@@ -70,21 +70,22 @@ export function TrainResultCard({ journey }: { journey: TrainJourney }) {
             <div className="flex items-center justify-between text-sm">
               <span className="flex items-center gap-1 text-muted-foreground">
                 <Gauge className="size-4" />
-                On-time
+                Đúng giờ
               </span>
               <span className="font-medium">{journey.punctuality}%</span>
             </div>
             <Progress value={journey.punctuality} />
           </div>
           <div className="flex flex-col gap-2 md:items-end">
-            <span className="text-sm text-muted-foreground">From</span>
+            <span className="text-sm text-muted-foreground">Từ</span>
             <span className="text-xl font-semibold">{formatCurrency(cheapestFare.price)}</span>
             <Button
               disabled={journey.status === "sold-out"}
+              nativeButton={false}
               onClick={() => selectTrain(journey)}
-              render={<Link href={`/trains/${journey.id}`} />}
+              render={<Link href={`/chuyen-tau/${journey.id}`} />}
             >
-              View detail
+              Chi tiết
             </Button>
           </div>
         </div>

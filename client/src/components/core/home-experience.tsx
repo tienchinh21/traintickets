@@ -10,9 +10,9 @@ import { TicketSummary } from "./ticket-summary";
 import { TrainDetailPanel } from "./train-detail-panel";
 
 const metrics = [
-  { label: "Routes monitored", value: "18", icon: SlidersHorizontal },
-  { label: "Hold window", value: "15m", icon: TimerReset },
-  { label: "Verified payment", value: "PCI", icon: ShieldCheck },
+  { label: "Tuyến theo dõi", value: "18", icon: SlidersHorizontal },
+  { label: "Giữ chỗ", value: "15p", icon: TimerReset },
+  { label: "Thanh toán an toàn", value: "PCI", icon: ShieldCheck },
 ];
 
 export function HomeExperience() {
@@ -24,11 +24,11 @@ export function HomeExperience() {
           <div className="flex flex-col justify-between gap-4 md:flex-row md:items-end">
             <div className="flex max-w-2xl flex-col gap-3">
               <Badge variant="secondary" className="w-fit">
-                Premium railway booking
+                Đặt vé tàu cao cấp
               </Badge>
-              <h1 className="text-3xl font-bold tracking-normal md:text-4xl">Find the right Vietnam train ticket faster.</h1>
+              <h1 className="text-3xl font-bold tracking-normal md:text-4xl">Tìm vé tàu Việt Nam phù hợp nhanh hơn.</h1>
               <p className="text-muted-foreground">
-                Dense search, route clarity, cabin selection, and checkout summary based on the Stitch premium design system.
+                Tìm chuyến rõ ràng, chọn khoang dễ hơn và theo dõi thanh toán trong một giao diện gọn.
               </p>
             </div>
             <div className="grid grid-cols-3 gap-3">
@@ -53,10 +53,10 @@ export function HomeExperience() {
           <div className="flex flex-col gap-4">
             <div className="flex items-center justify-between">
               <div>
-                <h2 className="text-xl font-semibold">Available departures</h2>
-                <p className="text-sm text-muted-foreground">Sorted by availability and route duration.</p>
+                <h2 className="text-xl font-semibold">Chuyến khởi hành</h2>
+                <p className="text-sm text-muted-foreground">Sắp xếp theo tình trạng chỗ và thời lượng di chuyển.</p>
               </div>
-              <Badge variant="outline">3 trains</Badge>
+              <Badge variant="outline">3 chuyến</Badge>
             </div>
             <ResultsList />
           </div>

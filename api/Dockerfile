@@ -12,6 +12,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
 COPY nest-cli.json tsconfig.json tsconfig.build.json ./
+COPY data ./data
 COPY prisma ./prisma
 COPY src ./src
 
@@ -32,5 +33,4 @@ COPY --from=builder /app/package.json ./package.json
 
 EXPOSE 3000
 
-CMD ["node", "dist/main.js"]
-
+CMD ["node", "dist/src/main.js"]

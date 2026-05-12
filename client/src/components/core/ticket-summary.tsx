@@ -20,15 +20,15 @@ export function TicketSummary({ journey, fare }: { journey?: TrainJourney; fare?
   const total = subtotal + serviceFee;
 
   return (
-    <Card className="sticky top-20">
+    <Card className="border-sky-100 bg-white shadow-[0_14px_34px_rgba(8,63,103,0.08)]">
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+        <CardTitle className="flex items-center gap-2 font-black text-[#172033]">
           <TicketCheck className="size-5 text-primary" />
-          Ticket summary
+          Tóm tắt vé
         </CardTitle>
       </CardHeader>
       <CardContent className="flex flex-col gap-4">
-        <div className="rounded-xl border border-dashed p-3">
+        <div className="rounded-2xl border border-dashed border-sky-200 bg-[#f8fcff] p-4">
           <div className="flex justify-between gap-4">
             <div>
               <div className="text-2xl font-semibold">{selectedTrain.from.time}</div>
@@ -50,24 +50,24 @@ export function TicketSummary({ journey, fare }: { journey?: TrainJourney; fare?
             <span>{formatCurrency(selectedFare.price)}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Passengers</span>
+            <span className="text-muted-foreground">Hành khách</span>
             <span>x{criteria.passengers}</span>
           </div>
           <div className="flex justify-between">
-            <span className="text-muted-foreground">Service fee</span>
+            <span className="text-muted-foreground">Phí dịch vụ</span>
             <span>{formatCurrency(serviceFee)}</span>
           </div>
         </div>
         <Separator />
         <div className="flex items-center justify-between">
-          <span className="font-medium">Total</span>
+          <span className="font-black">Tổng cộng</span>
           <span className="text-2xl font-semibold">{formatCurrency(total)}</span>
         </div>
       </CardContent>
       <CardFooter>
-        <Button className="w-full bg-accent-cta text-accent-cta-foreground hover:bg-accent-cta/90">
+        <Button className="w-full rounded-xl bg-accent-cta font-black text-accent-cta-foreground hover:bg-accent-cta/90" variant="secondary">
           <CreditCard data-icon="inline-start" />
-          Continue checkout
+          Tiếp tục thanh toán
         </Button>
       </CardFooter>
     </Card>

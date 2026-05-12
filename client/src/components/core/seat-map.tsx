@@ -14,15 +14,15 @@ export function SeatMap() {
     <div className="rounded-xl border bg-card p-4">
       <div className="mb-4 flex items-center justify-between">
         <div>
-          <h3 className="font-semibold">Carriage 6</h3>
-          <p className="text-sm text-muted-foreground">Sleeper cabin geometry</p>
+          <h3 className="font-semibold">Toa 6</h3>
+          <p className="text-sm text-muted-foreground">Sơ đồ khoang giường nằm</p>
         </div>
-        <div className="rounded-full bg-muted px-3 py-1 text-xs font-medium">2 selected</div>
+        <div className="rounded-full bg-muted px-3 py-1 text-xs font-medium">Đã chọn 2 ghế</div>
       </div>
       <div className="grid grid-cols-4 gap-2 rounded-2xl bg-surface-subtle p-3">
         {seats.map((seat) => (
           <button
-            aria-label={`Seat ${seat.id}`}
+            aria-label={`Ghế ${seat.id}`}
             className={cn(
               "h-10 rounded-lg border bg-card text-xs font-semibold transition",
               seat.selected && "border-primary bg-primary text-primary-foreground",
@@ -40,15 +40,15 @@ export function SeatMap() {
       <div className="mt-4 flex flex-wrap gap-3 text-xs text-muted-foreground">
         <span className="flex items-center gap-2">
           <span className="size-3 rounded-sm border bg-card" />
-          Available
+          Còn trống
         </span>
         <span className="flex items-center gap-2">
           <span className="size-3 rounded-sm bg-primary" />
-          Selected
+          Đã chọn
         </span>
         <span className="flex items-center gap-2">
           <span className="size-3 rounded-sm bg-muted" />
-          Sold out
+          Hết vé
         </span>
       </div>
     </div>

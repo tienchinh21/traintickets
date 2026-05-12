@@ -155,8 +155,9 @@ function SearchCard() {
           </div>
           <Button
             className="h-[64px] rounded-lg bg-accent-cta text-[20px] font-black text-[#201a00] shadow-[0_8px_0_#d99b00] hover:bg-accent-cta/90"
+            variant="secondary"
             nativeButton={false}
-            render={<Link href="/search" />}
+            render={<Link href="/tim-chuyen" />}
           >
             Tìm kiếm
           </Button>
@@ -168,7 +169,7 @@ function SearchCard() {
 
 function TransportTab({ discount, icon: Icon, label }: { discount: string; icon: typeof Plane; label: string }) {
   return (
-    <button className="relative flex items-center justify-center gap-3 text-[18px] font-semibold text-[#424242]" type="button">
+    <button className="relative flex cursor-pointer items-center justify-center gap-3 text-[18px] font-semibold text-[#424242]" type="button">
       <span className="absolute top-2 rounded-full bg-[#ef555b] px-2 py-0.5 text-xs font-bold text-white">{discount}</span>
       <Icon className="mt-4 size-6" />
       <span className="mt-4">{label}</span>

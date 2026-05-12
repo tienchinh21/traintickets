@@ -111,6 +111,15 @@ export class AuthService {
       );
     }
 
+    if (user.userType === UserType.CUSTOMER) {
+      throw new AppException(
+        'AUTH_CUSTOMER_LOGIN_FORBIDDEN',
+        'Tài khoản khách hàng không được phép đăng nhập hệ thống',
+        403,
+        ['Khách hàng không có quyền truy cập hệ thống CMS']
+      );
+    }
+
     await this.usersService.updateLastLoginAt(user.id);
 
     return this.issueTokens(user.id);

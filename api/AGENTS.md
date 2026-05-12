@@ -166,23 +166,27 @@ Use `ParseUUIDPipe` for UUID params and `ParsePositiveIntPipe` for numeric role/
 
 Endpoints:
 
-- `POST /auth/register`
-- `POST /auth/login`
-- `POST /auth/refresh`
-- `POST /auth/logout`
-- `GET /auth/me`
+- `POST /cms/auth/login`
+- `POST /cms/auth/refresh`
+- `POST /cms/auth/logout`
+- `GET /cms/auth/me`
+- `POST /client/auth/register`
+- `POST /client/auth/login`
+- `POST /client/auth/refresh`
+- `POST /client/auth/logout`
+- `GET /client/auth/me`
 
-Auth returns tokens and user profile. Login invalid credentials use `AUTH_INVALID_CREDENTIALS`. Expired/invalid token cases use auth error codes.
+Auth returns tokens and user profile. CMS auth only allows `STAFF` and `SYSTEM`; client auth only allows `CUSTOMER`. Login invalid credentials use `AUTH_INVALID_CREDENTIALS`. Expired/invalid token cases use auth error codes.
 
 ### Users
 
 Endpoints:
 
-- `POST /users`
-- `GET /users`
-- `GET /users/:id`
-- `PATCH /users/:id`
-- `DELETE /users/:id`
+- `POST /cms/users`
+- `GET /cms/users`
+- `GET /cms/users/:id`
+- `PATCH /cms/users/:id`
+- `DELETE /cms/users/:id`
 
 Permissions:
 
@@ -193,7 +197,7 @@ Permissions:
 
 Notes:
 
-- `GET /users` supports `page`, `limit`, `search`, `userType`, `status`.
+- `GET /cms/users` supports `page`, `limit`, `search`, `userType`, `status`.
 - List returns user summary and short role objects.
 - Detail returns user detail and roles, but not large permission trees.
 - Create/update validates email or phone is present.
@@ -205,12 +209,12 @@ Notes:
 
 Endpoints:
 
-- `GET /roles`
-- `POST /roles`
-- `GET /roles/:id`
-- `PATCH /roles/:id`
-- `PATCH /roles/:id/permissions`
-- `DELETE /roles/:id`
+- `GET /cms/roles`
+- `POST /cms/roles`
+- `GET /cms/roles/:id`
+- `PATCH /cms/roles/:id`
+- `PATCH /cms/roles/:id/permissions`
+- `DELETE /cms/roles/:id`
 
 Role IDs are numeric. Use `ParsePositiveIntPipe`. Delete means deactivate.
 
@@ -218,11 +222,11 @@ Role IDs are numeric. Use `ParsePositiveIntPipe`. Delete means deactivate.
 
 Endpoints:
 
-- `GET /permissions`
-- `POST /permissions`
-- `GET /permissions/:id`
-- `PATCH /permissions/:id`
-- `DELETE /permissions/:id`
+- `GET /cms/permissions`
+- `POST /cms/permissions`
+- `GET /cms/permissions/:id`
+- `PATCH /cms/permissions/:id`
+- `DELETE /cms/permissions/:id`
 
 Permission IDs are numeric. Use `ParsePositiveIntPipe`. Delete means deactivate.
 
@@ -230,11 +234,11 @@ Permission IDs are numeric. Use `ParsePositiveIntPipe`. Delete means deactivate.
 
 Endpoints:
 
-- `POST /stations`
-- `GET /stations`
-- `GET /stations/:id`
-- `PATCH /stations/:id`
-- `DELETE /stations/:id`
+- `POST /cms/stations`
+- `GET /cms/stations`
+- `GET /cms/stations/:id`
+- `PATCH /cms/stations/:id`
+- `DELETE /cms/stations/:id`
 
 Stations use UUID IDs. Delete is soft delete. List supports pagination/filtering.
 
@@ -242,11 +246,11 @@ Stations use UUID IDs. Delete is soft delete. List supports pagination/filtering
 
 Endpoints:
 
-- `POST /routes`
-- `GET /routes`
-- `GET /routes/:id`
-- `PATCH /routes/:id`
-- `DELETE /routes/:id`
+- `POST /cms/routes`
+- `GET /cms/routes`
+- `GET /cms/routes/:id`
+- `PATCH /cms/routes/:id`
+- `DELETE /cms/routes/:id`
 
 Routes and route stops use UUID IDs. Create/update route supports nested stops.
 
@@ -266,35 +270,35 @@ Implemented under `src/modules/trains`.
 
 Train endpoints:
 
-- `POST /trains`
-- `GET /trains`
-- `GET /trains/:id`
-- `PATCH /trains/:id`
-- `DELETE /trains/:id`
+- `POST /cms/trains`
+- `GET /cms/trains`
+- `GET /cms/trains/:id`
+- `PATCH /cms/trains/:id`
+- `DELETE /cms/trains/:id`
 
 Seat type endpoints:
 
-- `POST /seat-types`
-- `GET /seat-types`
-- `GET /seat-types/:id`
-- `PATCH /seat-types/:id`
-- `DELETE /seat-types/:id`
+- `POST /cms/seat-types`
+- `GET /cms/seat-types`
+- `GET /cms/seat-types/:id`
+- `PATCH /cms/seat-types/:id`
+- `DELETE /cms/seat-types/:id`
 
 Carriage endpoints:
 
-- `POST /trains/:trainId/carriages`
-- `GET /trains/:trainId/carriages`
-- `GET /carriages/:id`
-- `PATCH /carriages/:id`
-- `DELETE /carriages/:id`
+- `POST /cms/trains/:trainId/carriages`
+- `GET /cms/trains/:trainId/carriages`
+- `GET /cms/carriages/:id`
+- `PATCH /cms/carriages/:id`
+- `DELETE /cms/carriages/:id`
 
 Seat endpoints:
 
-- `POST /carriages/:carriageId/seats`
-- `GET /carriages/:carriageId/seats`
-- `GET /seats/:id`
-- `PATCH /seats/:id`
-- `DELETE /seats/:id`
+- `POST /cms/carriages/:carriageId/seats`
+- `GET /cms/carriages/:carriageId/seats`
+- `GET /cms/seats/:id`
+- `PATCH /cms/seats/:id`
+- `DELETE /cms/seats/:id`
 
 Important domain rules:
 

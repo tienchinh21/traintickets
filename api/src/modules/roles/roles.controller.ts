@@ -32,7 +32,7 @@ import { RolesService } from './roles.service';
 @ApiTags('roles')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@Controller('roles')
+@Controller('cms/roles')
 export class RolesController {
   constructor(private readonly rolesService: RolesService) {}
 

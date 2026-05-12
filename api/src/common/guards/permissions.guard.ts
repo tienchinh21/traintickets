@@ -90,12 +90,24 @@ export class PermissionsGuard implements CanActivate {
       /\/+/g,
       '/'
     );
-    const parameterIndex = resolvedRoutePath.indexOf('/:');
+    const routePaths = [
+      resolvedRoutePath,
+      this.withoutCmsPrefix(resolvedRoutePath)
+    ];
+    const allowedPaths = routePaths.flatMap((path) => {
+      const parameterIndex = path.indexOf('/:');
 
-    if (parameterIndex === -1) {
-      return [resolvedRoutePath];
-    }
+      if (parameterIndex === -1) {
+        return [path];
+      }
 
-    return [resolvedRoutePath, resolvedRoutePath.slice(0, parameterIndex)];
+      return [path, path.slice(0, parameterIndex)];
+    });
+
+    return [...new Set(allowedPaths)];
+  }
+
+  private withoutCmsPrefix(path: string) {
+    return path.startsWith('/cms/') ? path.slice('/cms'.length) : path;
   }
 }

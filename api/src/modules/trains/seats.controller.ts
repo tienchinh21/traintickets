@@ -34,7 +34,7 @@ import { UpdateSeatDto } from './dto/update-seat.dto';
 @ApiTags('seats')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@Controller()
+@Controller('cms')
 export class SeatsController {
   constructor(private readonly seatsService: SeatsService) {}
 

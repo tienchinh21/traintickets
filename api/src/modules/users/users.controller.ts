@@ -33,7 +33,7 @@ import { UsersService } from './users.service';
 @ApiTags('users')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@Controller('users')
+@Controller('cms/users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 

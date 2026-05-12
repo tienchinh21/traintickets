@@ -68,6 +68,13 @@ enum SeatStatus {
   INACTIVE
 }
 
+enum TripStatus {
+  DRAFT
+  OPEN
+  CLOSED
+  CANCELLED
+}
+
 model User {
   id           String     @id @default(uuid()) @db.Char(36)
   email        String?    @unique @db.VarChar(255)
@@ -211,6 +218,7 @@ model Station {
   deletedAt DateTime?     @map("deleted_at") @db.DateTime(3)
 
   routeStops RouteStop[]
+  tripStops  TripStop[]
 
   @@index([name])
   @@index([city])
@@ -229,6 +237,7 @@ model Route {
   deletedAt   DateTime?   @map("deleted_at") @db.DateTime(3)
 
   stops RouteStop[]
+  trips Trip[]
 
   @@index([status])
   @@map("routes")
@@ -265,21 +274,22 @@ model Train {
   deletedAt   DateTime?   @map("deleted_at") @db.DateTime(3)
 
   carriages Carriage[]
+  trips     Trip[]
 
   @@index([status])
   @@map("trains")
 }
 
 model SeatType {
-  id                    String         @id @default(uuid()) @db.Char(36)
-  code                  String         @unique @db.VarChar(30)
-  name                  String         @db.VarChar(100)
-  description           String?        @db.VarChar(500)
-  baseMultiplier        Decimal        @map("base_multiplier") @db.Decimal(5, 2)
-  allowedCarriageTypes  Json           @map("allowed_carriage_types")
-  status                SeatTypeStatus
-  createdAt             DateTime       @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt             DateTime       @updatedAt @map("updated_at") @db.DateTime(3)
+  id                   String         @id @default(uuid()) @db.Char(36)
+  code                 String         @unique @db.VarChar(30)
+  name                 String         @db.VarChar(100)
+  description          String?        @db.VarChar(500)
+  baseMultiplier       Decimal        @map("base_multiplier") @db.Decimal(5, 2)
+  allowedCarriageTypes Json           @map("allowed_carriage_types")
+  status               SeatTypeStatus
+  createdAt            DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt            DateTime       @updatedAt @map("updated_at") @db.DateTime(3)
 
   seats Seat[]
 
@@ -288,18 +298,18 @@ model SeatType {
 }
 
 model Carriage {
-  id              String         @id @default(uuid()) @db.Char(36)
-  trainId         String         @map("train_id") @db.Char(36)
-  carriageNumber  Int            @map("carriage_number") @db.UnsignedInt
-  name            String         @db.VarChar(100)
-  carriageType    CarriageType   @map("carriage_type")
-  seatMapLayout   Json?          @map("seat_map_layout")
-  status          CarriageStatus
-  createdAt       DateTime       @default(now()) @map("created_at") @db.DateTime(3)
-  updatedAt       DateTime       @updatedAt @map("updated_at") @db.DateTime(3)
-  deletedAt       DateTime?      @map("deleted_at") @db.DateTime(3)
+  id             String         @id @default(uuid()) @db.Char(36)
+  trainId        String         @map("train_id") @db.Char(36)
+  carriageNumber Int            @map("carriage_number") @db.UnsignedInt
+  name           String         @db.VarChar(100)
+  carriageType   CarriageType   @map("carriage_type")
+  seatMapLayout  Json?          @map("seat_map_layout")
+  status         CarriageStatus
+  createdAt      DateTime       @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt      DateTime       @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt      DateTime?      @map("deleted_at") @db.DateTime(3)
 
-  train Train @relation(fields: [trainId], references: [id])
+  train Train  @relation(fields: [trainId], references: [id])
   seats Seat[]
 
   @@index([trainId])
@@ -328,4 +338,49 @@ model Seat {
   @@index([seatTypeId])
   @@index([status])
   @@map("seats")
+}
+
+model Trip {
+  id          String     @id @default(uuid()) @db.Char(36)
+  routeId     String     @map("route_id") @db.Char(36)
+  trainId     String     @map("train_id") @db.Char(36)
+  code        String     @unique @db.VarChar(50)
+  serviceDate DateTime   @map("service_date") @db.Date
+  status      TripStatus
+  createdAt   DateTime   @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt   DateTime   @updatedAt @map("updated_at") @db.DateTime(3)
+  deletedAt   DateTime?  @map("deleted_at") @db.DateTime(3)
+
+  route Route      @relation(fields: [routeId], references: [id])
+  train Train      @relation(fields: [trainId], references: [id])
+  stops TripStop[]
+
+  @@index([routeId, serviceDate])
+  @@index([trainId, serviceDate])
+  @@index([status])
+  @@map("trips")
+}
+
+model TripStop {
+  id                   String    @id @default(uuid()) @db.Char(36)
+  tripId               String    @map("trip_id") @db.Char(36)
+  stationId            String    @map("station_id") @db.Char(36)
+  stopOrder            Int       @map("stop_order") @db.UnsignedInt
+  scheduledArrivalAt   DateTime? @map("scheduled_arrival_at") @db.DateTime(3)
+  scheduledDepartureAt DateTime? @map("scheduled_departure_at") @db.DateTime(3)
+  actualArrivalAt      DateTime? @map("actual_arrival_at") @db.DateTime(3)
+  actualDepartureAt    DateTime? @map("actual_departure_at") @db.DateTime(3)
+  distanceFromStartKm  Decimal   @map("distance_from_start_km") @db.Decimal(8, 2)
+  createdAt            DateTime  @default(now()) @map("created_at") @db.DateTime(3)
+  updatedAt            DateTime  @updatedAt @map("updated_at") @db.DateTime(3)
+
+  trip    Trip    @relation(fields: [tripId], references: [id])
+  station Station @relation(fields: [stationId], references: [id])
+
+  @@unique([tripId, stopOrder])
+  @@unique([tripId, stationId])
+  @@index([stationId])
+  @@index([scheduledDepartureAt])
+  @@index([scheduledArrivalAt])
+  @@map("trip_stops")
 }

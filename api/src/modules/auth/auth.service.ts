@@ -24,6 +24,7 @@ type TokenPayload = {
 };
 
 type DatabaseClient = PrismaService | Prisma.TransactionClient;
+type AuthProfile = Awaited<ReturnType<UsersService['findAuthProfileById']>>;
 
 @Injectable()
 export class AuthService {
@@ -34,7 +35,7 @@ export class AuthService {
     private readonly configService: ConfigService
   ) {}
 
-  async register(dto: RegisterDto) {
+  async registerCustomer(dto: RegisterDto) {
     if (!dto.email && !dto.phone) {
       throw new BadRequestException('Email hoặc số điện thoại là bắt buộc');
     }
@@ -85,7 +86,72 @@ export class AuthService {
     return this.issueTokens(user.id);
   }
 
-  async login(dto: LoginDto) {
+  async loginCms(dto: LoginDto) {
+    const user = await this.authenticateUser(dto);
+
+    this.ensureUserTypeAllowed(
+      user.userType,
+      [UserType.STAFF, UserType.SYSTEM],
+      {
+        code: 'AUTH_CMS_LOGIN_FORBIDDEN',
+        message: 'Tài khoản không được phép đăng nhập hệ thống',
+        details: ['Chỉ tài khoản nội bộ mới có quyền truy cập hệ thống CMS']
+      }
+    );
+
+    await this.usersService.updateLastLoginAt(user.id);
+
+    return this.issueTokens(user.id);
+  }
+
+  async loginCustomer(dto: LoginDto) {
+    const user = await this.authenticateUser(dto);
+
+    this.ensureUserTypeAllowed(user.userType, [UserType.CUSTOMER], {
+      code: 'AUTH_CUSTOMER_LOGIN_FORBIDDEN',
+      message: 'Tài khoản không được phép đăng nhập ứng dụng khách hàng',
+      details: ['Chỉ tài khoản khách hàng mới có quyền truy cập API client']
+    });
+
+    await this.usersService.updateLastLoginAt(user.id);
+
+    return this.issueTokens(user.id);
+  }
+
+  async refreshCms(dto: RefreshTokenDto) {
+    return this.refreshForUserTypes(dto, [UserType.STAFF, UserType.SYSTEM], {
+      code: 'AUTH_CMS_REFRESH_FORBIDDEN',
+      message: 'Phiên đăng nhập không được phép làm mới trên hệ thống',
+      details: ['Refresh token không thuộc tài khoản nội bộ']
+    });
+  }
+
+  async refreshCustomer(dto: RefreshTokenDto) {
+    return this.refreshForUserTypes(dto, [UserType.CUSTOMER], {
+      code: 'AUTH_CUSTOMER_REFRESH_FORBIDDEN',
+      message:
+        'Phiên đăng nhập không được phép làm mới trên ứng dụng khách hàng',
+      details: ['Refresh token không thuộc tài khoản khách hàng']
+    });
+  }
+
+  async meCms(userId: string) {
+    return this.meForUserTypes(userId, [UserType.STAFF, UserType.SYSTEM], {
+      code: 'AUTH_CMS_PROFILE_FORBIDDEN',
+      message: 'Tài khoản không được phép truy cập hồ sơ hệ thống',
+      details: ['Chỉ tài khoản nội bộ mới có quyền truy cập hồ sơ CMS']
+    });
+  }
+
+  async meCustomer(userId: string) {
+    return this.meForUserTypes(userId, [UserType.CUSTOMER], {
+      code: 'AUTH_CUSTOMER_PROFILE_FORBIDDEN',
+      message: 'Tài khoản không được phép truy cập hồ sơ khách hàng',
+      details: ['Chỉ tài khoản khách hàng mới có quyền truy cập hồ sơ client']
+    });
+  }
+
+  private async authenticateUser(dto: LoginDto) {
     const user = await this.findUserForLogin(dto.identifier);
 
     if (!user?.passwordHash || user.status !== UserStatus.ACTIVE) {
@@ -111,21 +177,14 @@ export class AuthService {
       );
     }
 
-    if (user.userType === UserType.CUSTOMER) {
-      throw new AppException(
-        'AUTH_CUSTOMER_LOGIN_FORBIDDEN',
-        'Tài khoản khách hàng không được phép đăng nhập hệ thống',
-        403,
-        ['Khách hàng không có quyền truy cập hệ thống CMS']
-      );
-    }
-
-    await this.usersService.updateLastLoginAt(user.id);
-
-    return this.issueTokens(user.id);
+    return user;
   }
 
-  async refresh(dto: RefreshTokenDto) {
+  private async refreshForUserTypes(
+    dto: RefreshTokenDto,
+    allowedTypes: UserType[],
+    forbiddenError: { code: string; message: string; details: string[] }
+  ) {
     const tokenHash = this.hashToken(dto.refreshToken);
 
     return this.prisma.$transaction(async (tx) => {
@@ -139,6 +198,12 @@ export class AuthService {
           ['Refresh token không hợp lệ hoặc đã hết hạn']
         );
       }
+
+      this.ensureUserTypeAllowed(
+        refreshToken.user.userType,
+        allowedTypes,
+        forbiddenError
+      );
 
       const revokedToken = await tx.refreshToken.updateMany({
         where: {
@@ -174,12 +239,18 @@ export class AuthService {
     };
   }
 
-  async me(userId: string) {
+  private async meForUserTypes(
+    userId: string,
+    allowedTypes: UserType[],
+    forbiddenError: { code: string; message: string; details: string[] }
+  ) {
     const user = await this.usersService.findAuthProfileById(userId);
 
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
     }
+
+    this.ensureUserTypeAllowed(user.userType, allowedTypes, forbiddenError);
 
     return this.toAuthProfile(user);
   }
@@ -248,6 +319,18 @@ export class AuthService {
         revokedAt: new Date()
       }
     });
+  }
+
+  private ensureUserTypeAllowed(
+    userType: UserType,
+    allowedTypes: UserType[],
+    error: { code: string; message: string; details: string[] }
+  ) {
+    if (allowedTypes.includes(userType)) {
+      return;
+    }
+
+    throw new AppException(error.code, error.message, 403, error.details);
   }
 
   private async issueTokens(
@@ -336,9 +419,7 @@ export class AuthService {
     );
   }
 
-  private toTokenPayload(
-    user: Awaited<ReturnType<UsersService['findAuthProfileById']>>
-  ): TokenPayload {
+  private toTokenPayload(user: AuthProfile): TokenPayload {
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
     }
@@ -351,9 +432,7 @@ export class AuthService {
     };
   }
 
-  private toAuthProfile(
-    user: Awaited<ReturnType<UsersService['findAuthProfileById']>>
-  ) {
+  private toAuthProfile(user: AuthProfile) {
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
     }

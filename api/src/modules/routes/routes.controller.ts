@@ -33,7 +33,7 @@ import { RoutesService } from './routes.service';
 @ApiTags('routes')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@Controller('routes')
+@Controller('cms/routes')
 export class RoutesController {
   constructor(private readonly routesService: RoutesService) {}
 

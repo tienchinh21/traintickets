@@ -33,7 +33,7 @@ import { UpdateCarriageDto } from './dto/update-carriage.dto';
 @ApiTags('carriages')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@Controller()
+@Controller('cms')
 export class CarriagesController {
   constructor(private readonly carriagesService: CarriagesService) {}
 

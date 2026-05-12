@@ -8,6 +8,7 @@ import {
   SeatStatus,
   SeatTypeStatus,
   StationStatus,
+  TripStatus,
   TrainStatus,
   UserStatus,
   UserType
@@ -167,6 +168,17 @@ async function main() {
       '/trains/:id'
     ],
     ['TRAINS_DELETE', 'Xóa tàu', 'trains', 'delete', 'DELETE', '/trains/:id'],
+    ['TRIPS_CREATE', 'Tạo chuyến', 'trips', 'create', 'POST', '/trips'],
+    ['TRIPS_READ', 'Xem chuyến', 'trips', 'read', 'GET', '/trips'],
+    [
+      'TRIPS_UPDATE',
+      'Cập nhật chuyến',
+      'trips',
+      'update',
+      'PATCH',
+      '/trips/:id'
+    ],
+    ['TRIPS_DELETE', 'Xóa chuyến', 'trips', 'delete', 'DELETE', '/trips/:id'],
     [
       'SEAT_TYPES_CREATE',
       'Tạo loại ghế',
@@ -650,6 +662,67 @@ async function main() {
         }
       });
     }
+  }
+
+  const seededRoute = await prisma.route.findUnique({
+    where: { code: 'HN-DN' },
+    include: {
+      stops: {
+        orderBy: {
+          stopOrder: 'asc'
+        }
+      }
+    }
+  });
+
+  if (seededRoute) {
+    const serviceDate = new Date('2026-06-01T00:00:00.000Z');
+    const trip = await prisma.trip.upsert({
+      where: { code: 'SE1-20260601' },
+      update: {
+        routeId: seededRoute.id,
+        trainId: train.id,
+        serviceDate,
+        status: TripStatus.OPEN,
+        deletedAt: null
+      },
+      create: {
+        routeId: seededRoute.id,
+        trainId: train.id,
+        code: 'SE1-20260601',
+        serviceDate,
+        status: TripStatus.OPEN
+      }
+    });
+
+    await prisma.tripStop.deleteMany({
+      where: { tripId: trip.id }
+    });
+
+    await prisma.tripStop.createMany({
+      data: seededRoute.stops.map((stop) => ({
+        tripId: trip.id,
+        stationId: stop.stationId,
+        stopOrder: stop.stopOrder,
+        scheduledArrivalAt:
+          stop.defaultArrivalOffsetMinutes === null
+            ? null
+            : new Date(
+                serviceDate.getTime() +
+                  Number(stop.defaultArrivalOffsetMinutes) * 60_000
+              ),
+        scheduledDepartureAt:
+          stop.defaultDepartureOffsetMinutes === null
+            ? null
+            : new Date(
+                serviceDate.getTime() +
+                  Number(stop.defaultDepartureOffsetMinutes) * 60_000
+              ),
+        distanceFromStartKm: stop.distanceFromStartKm
+      }))
+    });
+
+    console.log('Đã seed chuyến SE1-20260601.');
   }
 
   console.log(`Đã seed ${seatTypes.length} loại ghế.`);

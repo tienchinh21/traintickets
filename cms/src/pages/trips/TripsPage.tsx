@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, SearchOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined, ReloadOutlined, SearchOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   App as AntApp,
@@ -12,12 +12,14 @@ import {
   Modal,
   Select,
   Space,
+  Switch,
   Tag,
   Typography,
 } from 'antd'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
 import { useState } from 'react'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import { operationsApi } from '@/features/operations/api/operationsApi'
 import type {
   Route,
@@ -84,10 +86,12 @@ function toDateParam(value?: Dayjs | null) {
 }
 
 function buildTripPayload(values: TripFormModel): TripFormValues {
+  const code = values.code?.trim()
+
   return {
     routeId: values.routeId,
     trainId: values.trainId,
-    code: values.code.trim(),
+    ...(code ? { code } : {}),
     serviceDate: toDateParam(values.serviceDate) ?? '',
     status: values.status,
   }
@@ -122,6 +126,7 @@ function toStationOptions(stations: Station[]) {
 
 export function TripsPage() {
   const { message, modal } = AntApp.useApp()
+  const { hasPermission } = useAuth()
   const queryClient = useQueryClient()
   const [form] = Form.useForm<TripFormModel>()
   const [filterForm] = Form.useForm<TripFilterForm>()
@@ -131,6 +136,8 @@ export function TripsPage() {
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null)
   const [detailTripId, setDetailTripId] = useState<string | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [isTripCodeManual, setIsTripCodeManual] = useState(false)
+  const canGenerateTripCode = hasPermission('TRIPS_CREATE')
 
   const tripsQuery = useQuery({
     queryKey: ['trips', query],
@@ -277,8 +284,43 @@ export function TripsPage() {
     onError: (error) => message.error(getApiErrorMessage(error, 'Xóa chuyến thất bại')),
   })
 
+  const generateTripCodeMutation = useMutation({
+    mutationFn: operationsApi.generateTripCode,
+  })
+
+  const generateTripCode = async (showSuccess = false) => {
+    if (!canGenerateTripCode) return
+
+    const { trainId, serviceDate } = form.getFieldsValue(['trainId', 'serviceDate'])
+    const serviceDateValue = toDateParam(serviceDate)
+
+    if (!trainId || !serviceDateValue) {
+      if (showSuccess) {
+        message.warning('Vui lòng chọn tàu và ngày chạy trước khi tạo mã')
+      }
+      return
+    }
+
+    try {
+      const response = await generateTripCodeMutation.mutateAsync({
+        trainId,
+        serviceDate: serviceDateValue,
+      })
+
+      form.setFieldValue('code', response.data.code)
+      if (showSuccess) {
+        message.success(response.message)
+      }
+    } catch (error) {
+      if (showSuccess) {
+        message.error(getApiErrorMessage(error, 'Tạo mã chuyến thất bại'))
+      }
+    }
+  }
+
   const openCreateForm = () => {
     setEditingTrip(null)
+    setIsTripCodeManual(false)
     form.resetFields()
     form.setFieldsValue({
       status: 'DRAFT',
@@ -289,6 +331,7 @@ export function TripsPage() {
 
   const openEditForm = (trip: Trip) => {
     setEditingTrip(trip)
+    setIsTripCodeManual(false)
     form.setFieldsValue({
       routeId: trip.routeId,
       trainId: trip.trainId,
@@ -511,6 +554,7 @@ export function TripsPage() {
         onCancel={() => {
           setIsFormOpen(false)
           setEditingTrip(null)
+          setIsTripCodeManual(false)
           form.resetFields()
         }}
         onOk={() => form.submit()}
@@ -518,6 +562,12 @@ export function TripsPage() {
         <Form<TripFormModel>
           form={form}
           layout="vertical"
+          onValuesChange={(changedValues) => {
+            if (isTripCodeManual) return
+            if ('trainId' in changedValues || 'serviceDate' in changedValues) {
+              void generateTripCode(false)
+            }
+          }}
           onFinish={(values) => saveTripMutation.mutate(values)}
         >
           <Form.Item label="Tuyến" name="routeId" rules={[{ required: true, message: 'Vui lòng chọn tuyến' }]}>
@@ -538,11 +588,44 @@ export function TripsPage() {
               optionFilterProp="label"
             />
           </Form.Item>
-          <Form.Item label="Mã chuyến" name="code" rules={[{ required: true, message: 'Vui lòng nhập mã chuyến' }]}>
-            <Input placeholder="SE1-20260601" />
-          </Form.Item>
           <Form.Item label="Ngày chạy" name="serviceDate" rules={[{ required: true, message: 'Vui lòng chọn ngày chạy' }]}>
             <DatePicker className="full-width-input" format="DD/MM/YYYY" />
+          </Form.Item>
+          <Form.Item label="Mã chuyến">
+            <Space.Compact className="full-width-input">
+              <Form.Item name="code" noStyle>
+                <Input
+                  readOnly={!isTripCodeManual}
+                  placeholder="BE tự tạo nếu để trống"
+                />
+              </Form.Item>
+              <Button
+                icon={<ReloadOutlined />}
+                loading={generateTripCodeMutation.isPending}
+                disabled={!canGenerateTripCode}
+                onClick={() => void generateTripCode(true)}
+              >
+                Tạo lại mã
+              </Button>
+            </Space.Compact>
+            <div className="form-inline-note">
+              <Space size={8}>
+                <Typography.Text type="secondary">Sửa mã thủ công</Typography.Text>
+                <Switch
+                  size="small"
+                  checked={isTripCodeManual}
+                  onChange={(checked) => {
+                    setIsTripCodeManual(checked)
+                    if (!checked) {
+                      void generateTripCode(false)
+                    }
+                  }}
+                />
+              </Space>
+              <Typography.Text type="secondary">
+                Mã chỉ là gợi ý, backend vẫn kiểm tra format và chống trùng khi lưu.
+              </Typography.Text>
+            </div>
           </Form.Item>
           <Form.Item label="Trạng thái" name="status" rules={[{ required: true, message: 'Vui lòng chọn trạng thái' }]}>
             <Select options={tripStatusOptions} />

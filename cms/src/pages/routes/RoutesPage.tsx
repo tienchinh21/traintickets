@@ -1,4 +1,4 @@
-import { DeleteOutlined, EditOutlined, PlusOutlined } from '@ant-design/icons'
+import { DeleteOutlined, EditOutlined, PlusOutlined, ReloadOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import {
   App as AntApp,
@@ -10,9 +10,12 @@ import {
   Modal,
   Select,
   Space,
+  Switch,
   Tag,
+  Typography,
 } from 'antd'
-import { useState } from 'react'
+import { useRef, useState } from 'react'
+import { useAuth } from '@/features/auth/hooks/useAuth'
 import { operationsApi } from '@/features/operations/api/operationsApi'
 import type { Route, RouteFormValues } from '@/features/operations/types/operations.types'
 import { getApiErrorMessage } from '@/shared/api/errors'
@@ -58,10 +61,14 @@ const columns: ProColumns<Route>[] = [
 
 export function RoutesPage() {
   const { message, modal } = AntApp.useApp()
+  const { hasPermission } = useAuth()
   const queryClient = useQueryClient()
   const [form] = Form.useForm<RouteFormValues>()
+  const lastGeneratedRouteKey = useRef<string | null>(null)
   const [editingRoute, setEditingRoute] = useState<Route | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
+  const [isRouteCodeManual, setIsRouteCodeManual] = useState(false)
+  const canGenerateRouteCode = hasPermission('ROUTES_CREATE')
 
   const routesQuery = useQuery({
     queryKey: ['routes'],
@@ -75,11 +82,17 @@ export function RoutesPage() {
 
   const saveRouteMutation = useMutation({
     mutationFn: async (values: RouteFormValues) => {
-      if (editingRoute) {
-        return operationsApi.updateRoute(editingRoute.id, values)
+      const code = values.code?.trim()
+      const payload: RouteFormValues = {
+        ...values,
+        ...(code ? { code } : { code: undefined }),
       }
 
-      return operationsApi.createRoute(values)
+      if (editingRoute) {
+        return operationsApi.updateRoute(editingRoute.id, payload)
+      }
+
+      return operationsApi.createRoute(payload)
     },
     onSuccess: async (response) => {
       message.success(response.message)
@@ -100,8 +113,66 @@ export function RoutesPage() {
     onError: (error) => message.error(getApiErrorMessage(error, 'Xóa tuyến thất bại')),
   })
 
+  const generateRouteCodeMutation = useMutation({
+    mutationFn: operationsApi.generateRouteCode,
+  })
+
+  const getRouteCodeStations = () => {
+    const stops = form.getFieldValue('stops') as RouteFormValues['stops'] | undefined
+    const orderedStops = (stops ?? [])
+      .map((stop, index) => ({
+        stationId: stop?.stationId,
+        stopOrder: stop?.stopOrder ?? index + 1,
+      }))
+      .filter((stop): stop is { stationId: string, stopOrder: number } => Boolean(stop.stationId))
+      .sort((first, second) => first.stopOrder - second.stopOrder)
+
+    if (orderedStops.length < 2) {
+      return null
+    }
+
+    return {
+      fromStationId: orderedStops[0].stationId,
+      toStationId: orderedStops[orderedStops.length - 1].stationId,
+    }
+  }
+
+  const generateRouteCode = async (showSuccess = false) => {
+    if (!canGenerateRouteCode) return
+
+    const stations = getRouteCodeStations()
+
+    if (!stations) {
+      if (showSuccess) {
+        message.warning('Vui lòng chọn ít nhất ga đầu và ga cuối trước khi tạo mã')
+      }
+      return
+    }
+
+    const routeKey = `${stations.fromStationId}:${stations.toStationId}`
+    if (!showSuccess && lastGeneratedRouteKey.current === routeKey) {
+      return
+    }
+
+    try {
+      const response = await generateRouteCodeMutation.mutateAsync(stations)
+      lastGeneratedRouteKey.current = routeKey
+      form.setFieldValue('code', response.data.code)
+      if (showSuccess) {
+        message.success(response.message)
+      }
+    } catch (error) {
+      if (showSuccess) {
+        message.error(getApiErrorMessage(error, 'Tạo mã tuyến thất bại'))
+      }
+    }
+  }
+
   const openCreateForm = () => {
     setEditingRoute(null)
+    setIsRouteCodeManual(false)
+    lastGeneratedRouteKey.current = null
+    form.resetFields()
     form.setFieldsValue({
       status: 'ACTIVE',
       stops: [
@@ -116,6 +187,8 @@ export function RoutesPage() {
     try {
       const response = await operationsApi.getRoute(route.id)
       setEditingRoute(route)
+      setIsRouteCodeManual(false)
+      lastGeneratedRouteKey.current = null
       form.setFieldsValue({
         code: response.data.code,
         name: response.data.name,
@@ -192,6 +265,8 @@ export function RoutesPage() {
         onCancel={() => {
           setIsFormOpen(false)
           setEditingRoute(null)
+          setIsRouteCodeManual(false)
+          lastGeneratedRouteKey.current = null
           form.resetFields()
         }}
         onOk={() => form.submit()}
@@ -199,10 +274,47 @@ export function RoutesPage() {
         <Form<RouteFormValues>
           form={form}
           layout="vertical"
+          onValuesChange={(changedValues) => {
+            if (isRouteCodeManual) return
+            if ('stops' in changedValues) {
+              void generateRouteCode(false)
+            }
+          }}
           onFinish={(values) => saveRouteMutation.mutate(values)}
         >
-          <Form.Item label="Mã tuyến" name="code" rules={[{ required: true, message: 'Vui lòng nhập mã tuyến' }]}>
-            <Input placeholder="HN-DN" />
+          <Form.Item label="Mã tuyến">
+            <Space.Compact className="full-width-input">
+              <Form.Item name="code" noStyle>
+                <Input readOnly={!isRouteCodeManual} placeholder="BE tự tạo từ ga đầu/cuối nếu để trống" />
+              </Form.Item>
+              <Button
+                icon={<ReloadOutlined />}
+                loading={generateRouteCodeMutation.isPending}
+                disabled={!canGenerateRouteCode}
+                onClick={() => void generateRouteCode(true)}
+              >
+                Tạo lại mã
+              </Button>
+            </Space.Compact>
+            <div className="form-inline-note">
+              <Space size={8}>
+                <Typography.Text type="secondary">Sửa mã thủ công</Typography.Text>
+                <Switch
+                  size="small"
+                  checked={isRouteCodeManual}
+                  onChange={(checked) => {
+                    setIsRouteCodeManual(checked)
+                    if (!checked) {
+                      lastGeneratedRouteKey.current = null
+                      void generateRouteCode(false)
+                    }
+                  }}
+                />
+              </Space>
+              <Typography.Text type="secondary">
+                Nếu để trống, backend sẽ tự sinh mã từ ga đầu và ga cuối.
+              </Typography.Text>
+            </div>
           </Form.Item>
           <Form.Item label="Tên tuyến" name="name" rules={[{ required: true, message: 'Vui lòng nhập tên tuyến' }]}>
             <Input placeholder="Hà Nội - Đà Nẵng" />

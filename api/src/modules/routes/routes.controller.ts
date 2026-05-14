@@ -100,7 +100,7 @@ export class RoutesController {
   }
 
   @Post('generate-code')
-  @RequirePermissions('ROUTES_CREATE')
+  @RequirePermissions('ROUTES_GENERATE_CODE')
   @ApiOperation({
     summary: 'Tạo mã tuyến gợi ý',
     description:
@@ -110,7 +110,7 @@ export class RoutesController {
   @ApiOkResponse({ description: 'Mã tuyến gợi ý.' })
   @ApiUnauthorizedResponse({ description: 'Thiếu hoặc sai access token.' })
   @ApiForbiddenResponse({
-    description: 'User không có permission ROUTES_CREATE.'
+    description: 'User không có permission ROUTES_GENERATE_CODE.'
   })
   generateCode(@Body() dto: GenerateRouteCodeDto) {
     return this.routesService.generateCode(dto);

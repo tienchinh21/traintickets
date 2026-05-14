@@ -147,6 +147,14 @@ async function main() {
       '/stations/:id'
     ],
     ['ROUTES_CREATE', 'Tạo tuyến', 'routes', 'create', 'POST', '/routes'],
+    [
+      'ROUTES_GENERATE_CODE',
+      'Tạo mã tuyến gợi ý',
+      'routes',
+      'create',
+      'POST',
+      '/routes/generate-code'
+    ],
     ['ROUTES_READ', 'Xem tuyến', 'routes', 'read', 'GET', '/routes'],
     [
       'ROUTES_UPDATE',
@@ -169,6 +177,14 @@ async function main() {
     ],
     ['TRAINS_DELETE', 'Xóa tàu', 'trains', 'delete', 'DELETE', '/trains/:id'],
     ['TRIPS_CREATE', 'Tạo chuyến', 'trips', 'create', 'POST', '/trips'],
+    [
+      'TRIPS_GENERATE_CODE',
+      'Tạo mã chuyến gợi ý',
+      'trips',
+      'create',
+      'POST',
+      '/trips/generate-code'
+    ],
     ['TRIPS_READ', 'Xem chuyến', 'trips', 'read', 'GET', '/trips'],
     [
       'TRIPS_UPDATE',
@@ -220,6 +236,14 @@ async function main() {
       '/trains/:trainId/carriages'
     ],
     [
+      'CARRIAGES_SUGGEST',
+      'Gợi ý số toa và tên toa',
+      'carriages',
+      'create',
+      'POST',
+      '/trains/:trainId/carriages/suggest'
+    ],
+    [
       'CARRIAGES_READ',
       'Xem danh sách toa của tàu',
       'carriages',
@@ -258,6 +282,14 @@ async function main() {
       'create',
       'POST',
       '/carriages/:carriageId/seats'
+    ],
+    [
+      'SEATS_GENERATE',
+      'Tạo ghế hàng loạt',
+      'seats',
+      'create',
+      'POST',
+      '/carriages/:carriageId/seats/generate'
     ],
     [
       'SEATS_READ',

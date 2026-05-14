@@ -99,7 +99,7 @@ export class SeatsController {
   }
 
   @Post('carriages/:carriageId/seats/generate')
-  @RequirePermissions('SEATS_CREATE')
+  @RequirePermissions('SEATS_GENERATE')
   @ApiOperation({
     summary: 'Tạo ghế hàng loạt từ layout',
     description:
@@ -117,7 +117,7 @@ export class SeatsController {
   })
   @ApiUnauthorizedResponse({ description: 'Thiếu hoặc sai access token.' })
   @ApiForbiddenResponse({
-    description: 'User không có permission SEATS_CREATE.'
+    description: 'User không có permission SEATS_GENERATE.'
   })
   generate(
     @Param('carriageId', ParseUUIDPipe) carriageId: string,

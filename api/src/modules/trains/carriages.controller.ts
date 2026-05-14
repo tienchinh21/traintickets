@@ -96,7 +96,7 @@ export class CarriagesController {
   }
 
   @Post('trains/:trainId/carriages/suggest')
-  @RequirePermissions('CARRIAGES_CREATE')
+  @RequirePermissions('CARRIAGES_SUGGEST')
   @ApiOperation({
     summary: 'Gợi ý số toa và tên toa',
     description:
@@ -111,7 +111,7 @@ export class CarriagesController {
   @ApiOkResponse({ description: 'Gợi ý toa.' })
   @ApiUnauthorizedResponse({ description: 'Thiếu hoặc sai access token.' })
   @ApiForbiddenResponse({
-    description: 'User không có permission CARRIAGES_CREATE.'
+    description: 'User không có permission CARRIAGES_SUGGEST.'
   })
   suggest(
     @Param('trainId', ParseUUIDPipe) trainId: string,

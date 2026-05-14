@@ -9,6 +9,7 @@ import { RoutesPage } from '@/pages/routes/RoutesPage'
 import { SeatTypesPage } from '@/pages/seat-types/SeatTypesPage'
 import { StationsPage } from '@/pages/stations/StationsPage'
 import { TrainsPage } from '@/pages/trains/TrainsPage'
+import { TripsPage } from '@/pages/trips/TripsPage'
 import { UsersPage } from '@/pages/users/UsersPage'
 import { CmsLayout } from '@/shared/layouts/CmsLayout'
 
@@ -27,6 +28,7 @@ export function AppRouter() {
             <Route path="/stations" element={<StationsPage />} />
             <Route path="/routes" element={<RoutesPage />} />
             <Route path="/trains" element={<TrainsPage />} />
+            <Route path="/trips" element={<TripsPage />} />
             <Route path="/seat-types" element={<SeatTypesPage />} />
           </Route>
         </Route>

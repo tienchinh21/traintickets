@@ -14,13 +14,24 @@ import type {
   StationFormValues,
   Train,
   TrainFormValues,
+  Trip,
+  TripDetail,
+  TripFormValues,
+  TripListMeta,
+  TripQuery,
+  TripSearchPayload,
   UpdateCarriagePayload,
   UpdateRoutePayload,
   UpdateSeatPayload,
   UpdateSeatTypePayload,
   UpdateStationPayload,
   UpdateTrainPayload,
+  UpdateTripPayload,
 } from '../types/operations.types'
+
+type TripListResponse = ApiSuccess<Trip[]> & {
+  meta: TripListMeta
+}
 
 export const operationsApi = {
   async getStations() {
@@ -145,6 +156,36 @@ export const operationsApi = {
 
   async deleteSeat(id: string) {
     const response = await http.delete<ApiSuccess<Seat>>(`/seats/${id}`)
+    return response.data
+  },
+
+  async getTrips(params: TripQuery) {
+    const response = await http.get<TripListResponse>('/cms/trips', { params })
+    return response.data
+  },
+
+  async createTrip(payload: TripFormValues) {
+    const response = await http.post<ApiSuccess<Trip | null>>('/cms/trips', payload)
+    return response.data
+  },
+
+  async getTrip(id: string) {
+    const response = await http.get<ApiSuccess<TripDetail>>(`/cms/trips/${id}`)
+    return response.data
+  },
+
+  async updateTrip(id: string, payload: UpdateTripPayload) {
+    const response = await http.patch<ApiSuccess<Trip | null>>(`/cms/trips/${id}`, payload)
+    return response.data
+  },
+
+  async deleteTrip(id: string) {
+    const response = await http.delete<ApiSuccess<Trip | null>>(`/cms/trips/${id}`)
+    return response.data
+  },
+
+  async searchTrips(payload: TripSearchPayload) {
+    const response = await http.post<TripListResponse>('/cms/trips/search', payload)
     return response.data
   },
 }

@@ -77,7 +77,7 @@ export class TripsController {
   }
 
   @Post('generate-code')
-  @RequirePermissions('TRIPS_CREATE')
+  @RequirePermissions('TRIPS_GENERATE_CODE')
   @ApiOperation({
     summary: 'Tạo mã chuyến gợi ý',
     description:
@@ -87,7 +87,7 @@ export class TripsController {
   @ApiOkResponse({ description: 'Mã chuyến gợi ý.' })
   @ApiUnauthorizedResponse({ description: 'Thiếu hoặc sai access token.' })
   @ApiForbiddenResponse({
-    description: 'User không có permission TRIPS_CREATE.'
+    description: 'User không có permission TRIPS_GENERATE_CODE.'
   })
   generateCode(@Body() dto: GenerateTripCodeDto) {
     return this.tripsService.generateCode(dto);

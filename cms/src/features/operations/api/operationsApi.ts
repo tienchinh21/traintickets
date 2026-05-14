@@ -3,10 +3,14 @@ import { http } from '@/shared/api/http'
 import type {
   Carriage,
   CarriageFormValues,
+  CarriageSuggestion,
+  GeneratedCode,
   Route,
   RouteDetail,
   RouteFormValues,
   Seat,
+  SeatGenerationPayload,
+  SeatGenerationResult,
   SeatFormValues,
   SeatType,
   SeatTypeFormValues,
@@ -79,6 +83,11 @@ export const operationsApi = {
     return response.data
   },
 
+  async generateRouteCode(payload: { fromStationId: string, toStationId: string }) {
+    const response = await http.post<ApiSuccess<GeneratedCode>>('/routes/generate-code', payload)
+    return response.data
+  },
+
   async getTrains() {
     const response = await http.get<ApiSuccess<Train[]>>('/trains')
     return response.data
@@ -106,6 +115,11 @@ export const operationsApi = {
 
   async createCarriage(trainId: string, payload: CarriageFormValues) {
     const response = await http.post<ApiSuccess<Carriage>>(`/trains/${trainId}/carriages`, payload)
+    return response.data
+  },
+
+  async suggestCarriage(trainId: string, payload: { carriageType: string }) {
+    const response = await http.post<ApiSuccess<CarriageSuggestion>>(`/trains/${trainId}/carriages/suggest`, payload)
     return response.data
   },
 
@@ -159,33 +173,43 @@ export const operationsApi = {
     return response.data
   },
 
+  async generateSeats(carriageId: string, payload: SeatGenerationPayload) {
+    const response = await http.post<ApiSuccess<SeatGenerationResult>>(`/carriages/${carriageId}/seats/generate`, payload)
+    return response.data
+  },
+
   async getTrips(params: TripQuery) {
-    const response = await http.get<TripListResponse>('/cms/trips', { params })
+    const response = await http.get<TripListResponse>('/trips', { params })
     return response.data
   },
 
   async createTrip(payload: TripFormValues) {
-    const response = await http.post<ApiSuccess<Trip | null>>('/cms/trips', payload)
+    const response = await http.post<ApiSuccess<Trip | null>>('/trips', payload)
+    return response.data
+  },
+
+  async generateTripCode(payload: { trainId: string, serviceDate: string }) {
+    const response = await http.post<ApiSuccess<GeneratedCode>>('/trips/generate-code', payload)
     return response.data
   },
 
   async getTrip(id: string) {
-    const response = await http.get<ApiSuccess<TripDetail>>(`/cms/trips/${id}`)
+    const response = await http.get<ApiSuccess<TripDetail>>(`/trips/${id}`)
     return response.data
   },
 
   async updateTrip(id: string, payload: UpdateTripPayload) {
-    const response = await http.patch<ApiSuccess<Trip | null>>(`/cms/trips/${id}`, payload)
+    const response = await http.patch<ApiSuccess<Trip | null>>(`/trips/${id}`, payload)
     return response.data
   },
 
   async deleteTrip(id: string) {
-    const response = await http.delete<ApiSuccess<Trip | null>>(`/cms/trips/${id}`)
+    const response = await http.delete<ApiSuccess<Trip | null>>(`/trips/${id}`)
     return response.data
   },
 
   async searchTrips(payload: TripSearchPayload) {
-    const response = await http.post<TripListResponse>('/cms/trips/search', payload)
+    const response = await http.post<TripListResponse>('/trips/search', payload)
     return response.data
   },
 }

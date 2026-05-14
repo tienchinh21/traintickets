@@ -199,6 +199,16 @@ a {
   width: 100%;
 }
 
+.form-inline-note {
+  display: grid;
+  gap: 4px;
+  margin-top: 8px;
+}
+
+.form-suggest-button {
+  margin-bottom: 16px;
+}
+
 .route-stops {
   display: grid;
   gap: 12px;

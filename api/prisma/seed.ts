@@ -302,6 +302,25 @@ async function main() {
     });
   }
 
+  const deprecatedPermissionCodes = [
+    'ROUTES_GENERATE_CODE',
+    'TRIPS_GENERATE_CODE',
+    'TRIPS_SEARCH',
+    'CARRIAGES_SUGGEST',
+    'SEATS_GENERATE'
+  ];
+
+  await prisma.permission.updateMany({
+    where: {
+      code: {
+        in: deprecatedPermissionCodes
+      }
+    },
+    data: {
+      status: PermissionStatus.INACTIVE
+    }
+  });
+
   const superAdminRole = await prisma.role.findUnique({
     where: { code: 'SUPER_ADMIN' }
   });

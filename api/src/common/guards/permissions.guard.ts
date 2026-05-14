@@ -14,12 +14,6 @@ type RequestWithUser = Request & {
   user?: AuthenticatedUser;
 };
 
-type RequestRoute = {
-  route?: {
-    path?: unknown;
-  };
-};
-
 @Injectable()
 export class PermissionsGuard implements CanActivate {
   constructor(
@@ -59,11 +53,7 @@ export class PermissionsGuard implements CanActivate {
                 code: {
                   in: requiredPermissions
                 },
-                status: 'ACTIVE',
-                method: request.method,
-                path: {
-                  in: this.resolveAllowedRoutePaths(request)
-                }
+                status: 'ACTIVE'
               }
             }
           }
@@ -79,47 +69,5 @@ export class PermissionsGuard implements CanActivate {
     }
 
     return true;
-  }
-
-  private resolveAllowedRoutePaths(request: RequestWithUser) {
-    const routePath = (request as unknown as RequestRoute).route?.path;
-    const baseUrl = request.baseUrl ?? '';
-    const normalizedRoutePath =
-      typeof routePath === 'string' ? routePath : request.path;
-    const resolvedRoutePath = `${baseUrl}${normalizedRoutePath}`.replace(
-      /\/+/g,
-      '/'
-    );
-    const routePaths = [
-      resolvedRoutePath,
-      this.withoutCmsPrefix(resolvedRoutePath)
-    ];
-    const allowedPaths = routePaths.flatMap((path) => {
-      const parameterIndex = path.indexOf('/:');
-      const parentPaths = this.getParentPaths(path);
-
-      if (parameterIndex === -1) {
-        return [path, ...parentPaths];
-      }
-
-      return [path, ...parentPaths, path.slice(0, parameterIndex)];
-    });
-
-    return [...new Set(allowedPaths)];
-  }
-
-  private withoutCmsPrefix(path: string) {
-    return path.startsWith('/cms/') ? path.slice('/cms'.length) : path;
-  }
-
-  private getParentPaths(path: string) {
-    const segments = path.split('/').filter(Boolean);
-    const parents: string[] = [];
-
-    for (let index = segments.length - 1; index > 0; index -= 1) {
-      parents.push(`/${segments.slice(0, index).join('/')}`);
-    }
-
-    return parents;
   }
 }

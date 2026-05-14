@@ -26,6 +26,7 @@ import { Permissions as RequirePermissions } from '../../common/decorators/permi
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { CreateTripDto } from './dto/create-trip.dto';
+import { GenerateTripCodeDto } from './dto/generate-trip-code.dto';
 import { SearchTripsDto } from './dto/search-trips.dto';
 import { TripQueryDto } from './dto/trip-query.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
@@ -73,6 +74,23 @@ export class TripsController {
   @ApiForbiddenResponse({ description: 'User không có permission TRIPS_READ.' })
   findMany(@Query() query: TripQueryDto) {
     return this.tripsService.findMany(query);
+  }
+
+  @Post('generate-code')
+  @RequirePermissions('TRIPS_CREATE')
+  @ApiOperation({
+    summary: 'Tạo mã chuyến gợi ý',
+    description:
+      'Sinh mã chuyến từ mã tàu và ngày chạy. Đây là preview, khi tạo chuyến BE vẫn validate unique lại.'
+  })
+  @ApiBody({ type: GenerateTripCodeDto })
+  @ApiOkResponse({ description: 'Mã chuyến gợi ý.' })
+  @ApiUnauthorizedResponse({ description: 'Thiếu hoặc sai access token.' })
+  @ApiForbiddenResponse({
+    description: 'User không có permission TRIPS_CREATE.'
+  })
+  generateCode(@Body() dto: GenerateTripCodeDto) {
+    return this.tripsService.generateCode(dto);
   }
 
   @Post('search')

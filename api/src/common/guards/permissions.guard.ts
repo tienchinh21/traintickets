@@ -96,12 +96,13 @@ export class PermissionsGuard implements CanActivate {
     ];
     const allowedPaths = routePaths.flatMap((path) => {
       const parameterIndex = path.indexOf('/:');
+      const parentPaths = this.getParentPaths(path);
 
       if (parameterIndex === -1) {
-        return [path];
+        return [path, ...parentPaths];
       }
 
-      return [path, path.slice(0, parameterIndex)];
+      return [path, ...parentPaths, path.slice(0, parameterIndex)];
     });
 
     return [...new Set(allowedPaths)];
@@ -109,5 +110,16 @@ export class PermissionsGuard implements CanActivate {
 
   private withoutCmsPrefix(path: string) {
     return path.startsWith('/cms/') ? path.slice('/cms'.length) : path;
+  }
+
+  private getParentPaths(path: string) {
+    const segments = path.split('/').filter(Boolean);
+    const parents: string[] = [];
+
+    for (let index = segments.length - 1; index > 0; index -= 1) {
+      parents.push(`/${segments.slice(0, index).join('/')}`);
+    }
+
+    return parents;
   }
 }

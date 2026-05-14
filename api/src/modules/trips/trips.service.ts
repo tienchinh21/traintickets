@@ -8,6 +8,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { getPaginationOffset } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { CreateTripDto } from './dto/create-trip.dto';
+import { GenerateTripCodeDto } from './dto/generate-trip-code.dto';
 import { SearchTripsDto } from './dto/search-trips.dto';
 import { TripQueryDto } from './dto/trip-query.dto';
 import { UpdateTripDto } from './dto/update-trip.dto';
@@ -60,12 +61,17 @@ export class TripsService {
   constructor(private readonly prisma: PrismaService) {}
 
   async create(dto: CreateTripDto) {
-    const [route] = await Promise.all([
-      this.ensureRouteIsUsable(dto.routeId),
-      this.ensureTrainIsUsable(dto.trainId),
-      this.ensureCodeIsUnique(dto.code)
-    ]);
     const serviceDate = this.parseServiceDate(dto.serviceDate);
+    const [route, train] = await Promise.all([
+      this.ensureRouteIsUsable(dto.routeId),
+      this.ensureTrainIsUsable(dto.trainId)
+    ]);
+    const code =
+      dto.code ?? (await this.generateNextTripCode(train.code, serviceDate));
+
+    this.ensureTripCodeMatchesTrainDate(code, train.code, serviceDate);
+    await this.ensureCodeIsUnique(code);
+
     const tripStops = this.buildTripStops(route, serviceDate);
 
     await this.prisma.$transaction(async (tx) => {
@@ -73,7 +79,7 @@ export class TripsService {
         data: {
           routeId: dto.routeId,
           trainId: dto.trainId,
-          code: dto.code,
+          code,
           serviceDate,
           status: dto.status
         }
@@ -89,6 +95,18 @@ export class TripsService {
 
     return {
       message: 'Tạo chuyến thành công'
+    };
+  }
+
+  async generateCode(dto: GenerateTripCodeDto) {
+    const train = await this.ensureTrainIsUsable(dto.trainId);
+    const serviceDate = this.parseServiceDate(dto.serviceDate);
+
+    return {
+      data: {
+        code: await this.generateNextTripCode(train.code, serviceDate)
+      },
+      message: 'Tạo mã chuyến thành công'
     };
   }
 
@@ -175,11 +193,8 @@ export class TripsService {
   async update(id: string, dto: UpdateTripDto) {
     const currentTrip = await this.findExistingTrip(id);
 
-    if (dto.code) {
-      await this.ensureCodeIsUnique(dto.code, id);
-    }
-
     const routeId = dto.routeId ?? currentTrip.routeId;
+    const trainId = dto.trainId ?? currentTrip.trainId;
     const serviceDate = dto.serviceDate
       ? this.parseServiceDate(dto.serviceDate)
       : currentTrip.serviceDate;
@@ -190,9 +205,25 @@ export class TripsService {
     const route = routeChanged
       ? await this.ensureRouteIsUsable(routeId)
       : await this.getRouteWithStops(routeId);
+    const shouldResolveTrain = Boolean(
+      dto.trainId || dto.code || dto.serviceDate
+    );
+    const train = shouldResolveTrain
+      ? await this.ensureTrainIsUsable(trainId)
+      : null;
+    const code =
+      dto.code ??
+      (dto.trainId || dto.serviceDate
+        ? await this.generateNextTripCode(
+            train?.code ?? currentTrip.code.split('-')[0],
+            serviceDate,
+            currentTrip.id
+          )
+        : undefined);
 
-    if (dto.trainId) {
-      await this.ensureTrainIsUsable(dto.trainId);
+    if (code && train) {
+      this.ensureTripCodeMatchesTrainDate(code, train.code, serviceDate);
+      await this.ensureCodeIsUnique(code, id);
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -201,7 +232,7 @@ export class TripsService {
         data: {
           routeId: dto.routeId,
           trainId: dto.trainId,
-          code: dto.code,
+          code,
           serviceDate,
           status: dto.status
         }
@@ -357,7 +388,8 @@ export class TripsService {
         status: TrainStatus.ACTIVE
       },
       select: {
-        id: true
+        id: true,
+        code: true
       }
     });
 
@@ -369,6 +401,8 @@ export class TripsService {
         ['Tàu phải tồn tại, chưa bị xóa mềm và đang ACTIVE']
       );
     }
+
+    return train;
   }
 
   private async ensureCodeIsUnique(code: string, excludeId?: string) {
@@ -390,6 +424,67 @@ export class TripsService {
         [`Mã chuyến ${code} đã tồn tại`]
       );
     }
+  }
+
+  private async generateNextTripCode(
+    trainCode: string,
+    serviceDate: Date,
+    excludeId?: string
+  ) {
+    const baseCode = `${trainCode}-${this.formatServiceDateCode(serviceDate)}`;
+    const existingTrips = await this.prisma.trip.findMany({
+      where: {
+        code: {
+          startsWith: baseCode
+        },
+        ...(excludeId ? { id: { not: excludeId } } : {})
+      },
+      select: {
+        code: true
+      }
+    });
+
+    const usedSuffixes = new Set<number>();
+    for (const trip of existingTrips) {
+      if (trip.code === baseCode) {
+        usedSuffixes.add(1);
+        continue;
+      }
+
+      const suffix = trip.code.match(new RegExp(`^${baseCode}-(\\d{2})$`));
+      if (suffix) {
+        usedSuffixes.add(Number(suffix[1]));
+      }
+    }
+
+    if (!usedSuffixes.has(1)) {
+      return baseCode;
+    }
+
+    let nextSuffix = 2;
+    while (usedSuffixes.has(nextSuffix)) {
+      nextSuffix += 1;
+    }
+
+    return `${baseCode}-${nextSuffix.toString().padStart(2, '0')}`;
+  }
+
+  private ensureTripCodeMatchesTrainDate(
+    code: string,
+    trainCode: string,
+    serviceDate: Date
+  ) {
+    const expectedPrefix = `${trainCode}-${this.formatServiceDateCode(serviceDate)}`;
+    if (code === expectedPrefix || code.startsWith(`${expectedPrefix}-`)) {
+      return;
+    }
+
+    throw new AppException(
+      'TRIP_CODE_INVALID_FORMAT',
+      'Mã chuyến không đúng định dạng',
+      undefined,
+      [`Mã chuyến phải bắt đầu bằng ${expectedPrefix}`]
+    );
   }
 
   private async findExistingTrip(id: string) {
@@ -467,6 +562,10 @@ export class TripsService {
 
   private parseServiceDate(value: string) {
     return new Date(`${value}T00:00:00.000Z`);
+  }
+
+  private formatServiceDateCode(serviceDate: Date) {
+    return serviceDate.toISOString().slice(0, 10).replace(/-/g, '');
   }
 
   private addOffsetMinutes(serviceDate: Date, offsetMinutes?: number | null) {

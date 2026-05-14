@@ -26,6 +26,7 @@ import { Permissions as RequirePermissions } from '../../common/decorators/permi
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { CreateRouteDto } from './dto/create-route.dto';
+import { GenerateRouteCodeDto } from './dto/generate-route-code.dto';
 import { RouteQueryDto } from './dto/route-query.dto';
 import { UpdateRouteDto } from './dto/update-route.dto';
 import { RoutesService } from './routes.service';
@@ -96,6 +97,23 @@ export class RoutesController {
   })
   findMany(@Query() query: RouteQueryDto) {
     return this.routesService.findMany(query);
+  }
+
+  @Post('generate-code')
+  @RequirePermissions('ROUTES_CREATE')
+  @ApiOperation({
+    summary: 'Tạo mã tuyến gợi ý',
+    description:
+      'Sinh mã tuyến từ ga đầu và ga cuối. Đây là preview, khi tạo tuyến BE vẫn validate unique lại.'
+  })
+  @ApiBody({ type: GenerateRouteCodeDto })
+  @ApiOkResponse({ description: 'Mã tuyến gợi ý.' })
+  @ApiUnauthorizedResponse({ description: 'Thiếu hoặc sai access token.' })
+  @ApiForbiddenResponse({
+    description: 'User không có permission ROUTES_CREATE.'
+  })
+  generateCode(@Body() dto: GenerateRouteCodeDto) {
+    return this.routesService.generateCode(dto);
   }
 
   @Get(':id')

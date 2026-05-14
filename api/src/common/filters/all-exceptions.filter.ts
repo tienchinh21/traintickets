@@ -155,6 +155,11 @@ export class AllExceptionsFilter implements ExceptionFilter {
           message: 'Mã chuyến đã tồn tại',
           details: ['Mã chuyến đã tồn tại']
         },
+        Route: {
+          code: 'ROUTE_CODE_DUPLICATED',
+          message: 'Mã tuyến đã tồn tại',
+          details: ['Mã tuyến đã tồn tại']
+        },
         Station: {
           code: 'STATION_CODE_DUPLICATED',
           message: 'Mã ga đã tồn tại',

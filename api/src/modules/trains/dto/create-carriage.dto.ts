@@ -12,25 +12,29 @@ import {
 } from 'class-validator';
 
 export class CreateCarriageDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     type: Number,
     example: 1,
     minimum: 1,
-    description: 'Số thứ tự toa trong cùng tàu, không được trùng'
+    description:
+      'Số thứ tự toa trong cùng tàu. Nếu không gửi, BE tự lấy số tiếp theo.'
   })
+  @IsOptional()
   @Type(() => Number)
   @IsInt()
   @Min(1)
-  carriageNumber!: number;
+  carriageNumber?: number;
 
-  @ApiProperty({
-    example: 'Toa 1 ghế ngồi',
+  @ApiPropertyOptional({
+    example: 'Toa 1 - Ghế ngồi',
     maxLength: 100,
-    description: 'Tên toa hiển thị'
+    description:
+      'Tên toa hiển thị. Nếu không gửi, BE tự sinh từ số toa và loại toa.'
   })
+  @IsOptional()
   @IsString()
   @MaxLength(100)
-  name!: string;
+  name?: string;
 
   @ApiProperty({
     enum: CarriageType,

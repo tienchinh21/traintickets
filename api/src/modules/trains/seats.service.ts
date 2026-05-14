@@ -1,9 +1,19 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { CarriageType, Prisma, SeatTypeStatus } from '@prisma/client';
+import {
+  CarriageType,
+  Prisma,
+  SeatStatus,
+  SeatTypeStatus
+} from '@prisma/client';
 import { AppException } from '../../common/exceptions/app.exception';
 import { getPaginationOffset } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { CreateSeatDto } from './dto/create-seat.dto';
+import {
+  GenerateSeatsDto,
+  SeatLayoutType,
+  SeatNumberingMode
+} from './dto/generate-seats.dto';
 import { SeatQueryDto } from './dto/seat-query.dto';
 import { UpdateSeatDto } from './dto/update-seat.dto';
 
@@ -47,6 +57,54 @@ export class SeatsService {
 
     return {
       message: 'Tạo ghế thành công'
+    };
+  }
+
+  async generate(carriageId: string, dto: GenerateSeatsDto) {
+    await this.ensureSeatTypeMatchesCarriage(carriageId, dto.seatTypeId);
+    const seats = this.buildGeneratedSeats(dto);
+
+    if (seats.length === 0) {
+      throw new AppException(
+        'SEAT_GENERATION_EMPTY',
+        'Không có ghế nào được sinh',
+        undefined,
+        ['Layout không sinh ra ghế nào']
+      );
+    }
+
+    await this.ensureGeneratedSeatsAreUnique(carriageId, seats);
+
+    const status = dto.status ?? SeatStatus.ACTIVE;
+    const data = seats.map((seat) => ({
+      carriageId,
+      seatTypeId: dto.seatTypeId,
+      seatNumber: seat.seatNumber,
+      rowNumber: seat.rowNumber,
+      columnNumber: seat.columnNumber,
+      floorNumber: seat.floorNumber,
+      status
+    }));
+
+    if (dto.previewOnly) {
+      return {
+        data: {
+          seats: data
+        },
+        message: 'Preview ghế thành công'
+      };
+    }
+
+    await this.prisma.seat.createMany({
+      data
+    });
+
+    return {
+      data: {
+        created: data.length,
+        seats: data
+      },
+      message: 'Tạo ghế hàng loạt thành công'
     };
   }
 
@@ -259,6 +317,11 @@ export class SeatsService {
         ]
       );
     }
+
+    return {
+      carriage,
+      seatType
+    };
   }
 
   private async findExistingSeat(id: string) {
@@ -317,6 +380,173 @@ export class SeatsService {
         ]
       );
     }
+  }
+
+  private async ensureGeneratedSeatsAreUnique(
+    carriageId: string,
+    seats: Array<{ seatNumber: string }>
+  ) {
+    const generatedNumbers = new Set<string>();
+
+    for (const seat of seats) {
+      if (generatedNumbers.has(seat.seatNumber)) {
+        throw new AppException(
+          'SEAT_LAYOUT_INVALID',
+          'Layout sinh số ghế bị trùng',
+          undefined,
+          [`Số ghế ${seat.seatNumber} bị trùng trong layout`]
+        );
+      }
+
+      generatedNumbers.add(seat.seatNumber);
+    }
+
+    const existingSeats = await this.prisma.seat.findMany({
+      where: {
+        carriageId,
+        deletedAt: null,
+        seatNumber: {
+          in: [...generatedNumbers]
+        }
+      },
+      select: {
+        seatNumber: true
+      }
+    });
+
+    if (existingSeats.length > 0) {
+      throw new AppException(
+        'SEAT_NUMBER_DUPLICATED',
+        'Số ghế đã tồn tại',
+        undefined,
+        existingSeats.map(
+          (seat) => `Số ghế ${seat.seatNumber} đã tồn tại trong toa`
+        )
+      );
+    }
+  }
+
+  private buildGeneratedSeats(dto: GenerateSeatsDto) {
+    if (dto.layoutType === SeatLayoutType.SEAT_GRID) {
+      return this.buildSeatGrid(dto);
+    }
+
+    if (dto.layoutType === SeatLayoutType.SLEEPER_ROOM) {
+      return this.buildSleeperRoom(dto);
+    }
+
+    throw new AppException(
+      'SEAT_LAYOUT_UNSUPPORTED',
+      'Layout ghế không được hỗ trợ',
+      undefined,
+      ['Layout ghế không được hỗ trợ']
+    );
+  }
+
+  private buildSeatGrid(dto: GenerateSeatsDto) {
+    if (!dto.rows || !dto.columns) {
+      throw new AppException(
+        'SEAT_LAYOUT_INVALID',
+        'Layout ghế không hợp lệ',
+        undefined,
+        ['rows và columns là bắt buộc với SEAT_GRID']
+      );
+    }
+
+    const numbering = dto.numbering ?? SeatNumberingMode.ROW_COLUMN;
+
+    if (
+      ![SeatNumberingMode.ROW_COLUMN, SeatNumberingMode.NUMERIC].includes(
+        numbering
+      )
+    ) {
+      throw new AppException(
+        'SEAT_LAYOUT_INVALID',
+        'Kiểu đánh số không phù hợp với layout',
+        undefined,
+        ['SEAT_GRID chỉ hỗ trợ ROW_COLUMN hoặc NUMERIC']
+      );
+    }
+
+    const seats: Array<{
+      seatNumber: string;
+      rowNumber: number;
+      columnNumber: number;
+      floorNumber: null;
+    }> = [];
+    let sequence = 1;
+
+    for (let row = 1; row <= dto.rows; row += 1) {
+      for (let column = 1; column <= dto.columns; column += 1) {
+        seats.push({
+          seatNumber:
+            numbering === SeatNumberingMode.NUMERIC
+              ? sequence.toString().padStart(2, '0')
+              : `${this.toRowLabel(row)}${column}`,
+          rowNumber: row,
+          columnNumber: column,
+          floorNumber: null
+        });
+        sequence += 1;
+      }
+    }
+
+    return seats;
+  }
+
+  private buildSleeperRoom(dto: GenerateSeatsDto) {
+    if (!dto.rooms || !dto.bedsPerRoom) {
+      throw new AppException(
+        'SEAT_LAYOUT_INVALID',
+        'Layout ghế không hợp lệ',
+        undefined,
+        ['rooms và bedsPerRoom là bắt buộc với SLEEPER_ROOM']
+      );
+    }
+
+    const numbering = dto.numbering ?? SeatNumberingMode.ROOM_BED;
+
+    if (numbering !== SeatNumberingMode.ROOM_BED) {
+      throw new AppException(
+        'SEAT_LAYOUT_INVALID',
+        'Kiểu đánh số không phù hợp với layout',
+        undefined,
+        ['SLEEPER_ROOM chỉ hỗ trợ ROOM_BED']
+      );
+    }
+
+    const seats: Array<{
+      seatNumber: string;
+      rowNumber: number;
+      columnNumber: number;
+      floorNumber: number;
+    }> = [];
+
+    for (let room = 1; room <= dto.rooms; room += 1) {
+      for (let bed = 1; bed <= dto.bedsPerRoom; bed += 1) {
+        seats.push({
+          seatNumber: `${room}${this.toRowLabel(bed)}`,
+          rowNumber: room,
+          columnNumber: bed,
+          floorNumber: bed
+        });
+      }
+    }
+
+    return seats;
+  }
+
+  private toRowLabel(value: number) {
+    let currentValue = value;
+    let label = '';
+
+    while (currentValue > 0) {
+      currentValue -= 1;
+      label = String.fromCharCode(65 + (currentValue % 26)) + label;
+      currentValue = Math.floor(currentValue / 26);
+    }
+
+    return label;
   }
 
   private parseAllowedCarriageTypes(value: Prisma.JsonValue): CarriageType[] {

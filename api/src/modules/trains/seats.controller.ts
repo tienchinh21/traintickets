@@ -27,6 +27,7 @@ import { Permissions as RequirePermissions } from '../../common/decorators/permi
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { CreateSeatDto } from './dto/create-seat.dto';
+import { GenerateSeatsDto } from './dto/generate-seats.dto';
 import { SeatQueryDto } from './dto/seat-query.dto';
 import { SeatsService } from './seats.service';
 import { UpdateSeatDto } from './dto/update-seat.dto';
@@ -95,6 +96,34 @@ export class SeatsController {
     @Query() query: SeatQueryDto
   ) {
     return this.seatsService.findMany(carriageId, query);
+  }
+
+  @Post('carriages/:carriageId/seats/generate')
+  @RequirePermissions('SEATS_CREATE')
+  @ApiOperation({
+    summary: 'Tạo ghế hàng loạt từ layout',
+    description:
+      'Sinh seatNumber từ layout, validate trùng số ghế và có thể preview trước khi tạo thật.'
+  })
+  @ApiParam({
+    name: 'carriageId',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'UUID toa'
+  })
+  @ApiBody({ type: GenerateSeatsDto })
+  @ApiOkResponse({ description: 'Ghế được preview hoặc tạo hàng loạt.' })
+  @ApiBadRequestResponse({
+    description: 'Layout không hợp lệ hoặc số ghế bị trùng.'
+  })
+  @ApiUnauthorizedResponse({ description: 'Thiếu hoặc sai access token.' })
+  @ApiForbiddenResponse({
+    description: 'User không có permission SEATS_CREATE.'
+  })
+  generate(
+    @Param('carriageId', ParseUUIDPipe) carriageId: string,
+    @Body() dto: GenerateSeatsDto
+  ) {
+    return this.seatsService.generate(carriageId, dto);
   }
 
   @Get('seats/:id')

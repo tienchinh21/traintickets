@@ -1,10 +1,12 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { TripStatus } from '@prisma/client';
 import {
   IsDateString,
   IsEnum,
+  IsOptional,
   IsString,
   IsUUID,
+  Matches,
   MaxLength
 } from 'class-validator';
 
@@ -23,14 +25,18 @@ export class CreateTripDto {
   @IsUUID()
   trainId!: string;
 
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'SE1-20260601',
     maxLength: 50,
-    description: 'Mã chuyến duy nhất'
+    pattern: '^[A-Z0-9]+-[0-9]{8}(?:-[0-9]{2})?$',
+    description:
+      'Mã chuyến duy nhất. Nếu không gửi, BE tự sinh từ mã tàu và ngày chạy.'
   })
+  @IsOptional()
   @IsString()
   @MaxLength(50)
-  code!: string;
+  @Matches(/^[A-Z0-9]+-[0-9]{8}(?:-[0-9]{2})?$/)
+  code?: string;
 
   @ApiProperty({
     example: '2026-06-01',

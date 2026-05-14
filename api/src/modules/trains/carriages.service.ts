@@ -5,6 +5,7 @@ import { getPaginationOffset } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { CarriageQueryDto } from './dto/carriage-query.dto';
 import { CreateCarriageDto } from './dto/create-carriage.dto';
+import { SuggestCarriageDto } from './dto/suggest-carriage.dto';
 import { UpdateCarriageDto } from './dto/update-carriage.dto';
 
 const carriageDetailInclude = {
@@ -39,17 +40,22 @@ export class CarriagesService {
 
   async create(trainId: string, dto: CreateCarriageDto) {
     const train = await this.ensureTrainExists(trainId);
+    const carriageNumber =
+      dto.carriageNumber ?? (await this.getNextCarriageNumber(trainId));
+    const name =
+      dto.name ?? this.buildCarriageName(carriageNumber, dto.carriageType);
+
     await this.ensureCarriageNumberIsUnique(
       trainId,
-      dto.carriageNumber,
+      carriageNumber,
       train.code
     );
 
     await this.prisma.carriage.create({
       data: {
         trainId,
-        carriageNumber: dto.carriageNumber,
-        name: dto.name,
+        carriageNumber,
+        name,
         carriageType: dto.carriageType,
         seatMapLayout: dto.seatMapLayout as Prisma.InputJsonValue,
         status: dto.status
@@ -58,6 +64,19 @@ export class CarriagesService {
 
     return {
       message: 'Tạo toa thành công'
+    };
+  }
+
+  async suggest(trainId: string, dto: SuggestCarriageDto) {
+    await this.ensureTrainExists(trainId);
+    const carriageNumber = await this.getNextCarriageNumber(trainId);
+
+    return {
+      data: {
+        carriageNumber,
+        name: this.buildCarriageName(carriageNumber, dto.carriageType)
+      },
+      message: 'Gợi ý toa thành công'
     };
   }
 
@@ -109,7 +128,10 @@ export class CarriagesService {
     const carriage = await this.prisma.carriage.findFirst({
       where: {
         id,
-        deletedAt: null
+        deletedAt: null,
+        train: {
+          deletedAt: null
+        }
       },
       include: carriageDetailInclude
     });
@@ -196,7 +218,10 @@ export class CarriagesService {
     const carriage = await this.prisma.carriage.findFirst({
       where: {
         id,
-        deletedAt: null
+        deletedAt: null,
+        train: {
+          deletedAt: null
+        }
       },
       include: {
         train: {
@@ -240,6 +265,23 @@ export class CarriagesService {
         [`Số toa ${carriageNumber} đã tồn tại trong tàu ${trainCode}`]
       );
     }
+  }
+
+  private async getNextCarriageNumber(trainId: string) {
+    const lastCarriage = await this.prisma.carriage.findFirst({
+      where: {
+        trainId,
+        deletedAt: null
+      },
+      orderBy: {
+        carriageNumber: 'desc'
+      },
+      select: {
+        carriageNumber: true
+      }
+    });
+
+    return (lastCarriage?.carriageNumber ?? 0) + 1;
   }
 
   private async ensureExistingSeatsMatchCarriageType(
@@ -304,6 +346,19 @@ export class CarriagesService {
     };
 
     return labels[carriageType];
+  }
+
+  private buildCarriageName(
+    carriageNumber: number,
+    carriageType: CarriageType
+  ) {
+    const labels: Record<CarriageType, string> = {
+      [CarriageType.SEAT]: 'Ghế ngồi',
+      [CarriageType.SLEEPER]: 'Giường nằm',
+      [CarriageType.VIP]: 'VIP'
+    };
+
+    return `Toa ${carriageNumber} - ${labels[carriageType]}`;
   }
 
   private serializeCarriageDetail(carriage: CarriageWithDetail) {

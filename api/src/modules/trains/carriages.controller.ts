@@ -28,12 +28,13 @@ import { PermissionsGuard } from '../../common/guards/permissions.guard';
 import { CarriagesService } from './carriages.service';
 import { CarriageQueryDto } from './dto/carriage-query.dto';
 import { CreateCarriageDto } from './dto/create-carriage.dto';
+import { SuggestCarriageDto } from './dto/suggest-carriage.dto';
 import { UpdateCarriageDto } from './dto/update-carriage.dto';
 
 @ApiTags('carriages')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@Controller()
+@Controller('cms')
 export class CarriagesController {
   constructor(private readonly carriagesService: CarriagesService) {}
 
@@ -92,6 +93,31 @@ export class CarriagesController {
     @Query() query: CarriageQueryDto
   ) {
     return this.carriagesService.findMany(trainId, query);
+  }
+
+  @Post('trains/:trainId/carriages/suggest')
+  @RequirePermissions('CARRIAGES_CREATE')
+  @ApiOperation({
+    summary: 'Gợi ý số toa và tên toa',
+    description:
+      'Sinh số toa tiếp theo trong tàu và tên toa từ loại toa. Đây là preview, khi tạo toa BE vẫn validate unique lại.'
+  })
+  @ApiParam({
+    name: 'trainId',
+    example: '550e8400-e29b-41d4-a716-446655440000',
+    description: 'UUID tàu'
+  })
+  @ApiBody({ type: SuggestCarriageDto })
+  @ApiOkResponse({ description: 'Gợi ý toa.' })
+  @ApiUnauthorizedResponse({ description: 'Thiếu hoặc sai access token.' })
+  @ApiForbiddenResponse({
+    description: 'User không có permission CARRIAGES_CREATE.'
+  })
+  suggest(
+    @Param('trainId', ParseUUIDPipe) trainId: string,
+    @Body() dto: SuggestCarriageDto
+  ) {
+    return this.carriagesService.suggest(trainId, dto);
   }
 
   @Get('carriages/:id')

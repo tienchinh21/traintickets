@@ -14,17 +14,18 @@ import {
 import { RouteStopDto } from './route-stop.dto';
 
 export class CreateRouteDto {
-  @ApiProperty({
+  @ApiPropertyOptional({
     example: 'HN-DN',
     maxLength: 30,
     pattern: '^[A-Z0-9]+(?:-[A-Z0-9]+)*$',
     description:
-      'Mã tuyến duy nhất, viết hoa, không dấu, cho phép dấu gạch ngang'
+      'Mã tuyến duy nhất. Nếu không gửi, BE tự sinh từ ga đầu và ga cuối.'
   })
+  @IsOptional()
   @IsString()
   @MaxLength(30)
   @Matches(/^[A-Z0-9]+(?:-[A-Z0-9]+)*$/)
-  code!: string;
+  code?: string;
 
   @ApiProperty({
     example: 'Hà Nội - Đà Nẵng',

@@ -150,6 +150,16 @@ export class AllExceptionsFilter implements ExceptionFilter {
           message: 'Mã tàu đã tồn tại',
           details: ['Mã tàu đã tồn tại']
         },
+        Trip: {
+          code: 'TRIP_CODE_DUPLICATED',
+          message: 'Mã chuyến đã tồn tại',
+          details: ['Mã chuyến đã tồn tại']
+        },
+        Route: {
+          code: 'ROUTE_CODE_DUPLICATED',
+          message: 'Mã tuyến đã tồn tại',
+          details: ['Mã tuyến đã tồn tại']
+        },
         Station: {
           code: 'STATION_CODE_DUPLICATED',
           message: 'Mã ga đã tồn tại',
@@ -173,6 +183,28 @@ export class AllExceptionsFilter implements ExceptionFilter {
       }
     }
 
+    if (modelName === 'User') {
+      const userMappings: Record<
+        string,
+        { code: string; message: string; details: string[] }
+      > = {
+        email: {
+          code: 'USER_EMAIL_DUPLICATED',
+          message: 'Email đã tồn tại',
+          details: ['Email đã tồn tại']
+        },
+        phone: {
+          code: 'USER_PHONE_DUPLICATED',
+          message: 'Số điện thoại đã tồn tại',
+          details: ['Số điện thoại đã tồn tại']
+        }
+      };
+      const userError = userMappings[target];
+      if (userError) {
+        return userError;
+      }
+    }
+
     const mappings: Record<
       string,
       { code: string; message: string; details: string[] }
@@ -187,7 +219,17 @@ export class AllExceptionsFilter implements ExceptionFilter {
         message: 'Số toa đã tồn tại',
         details: ['Số toa đã tồn tại trong tàu']
       },
+      'train_id,active_carriage_number': {
+        code: 'CARRIAGE_NUMBER_DUPLICATED',
+        message: 'Số toa đã tồn tại',
+        details: ['Số toa đã tồn tại trong tàu']
+      },
       'carriage_id,seat_number': {
+        code: 'SEAT_NUMBER_DUPLICATED',
+        message: 'Số ghế đã tồn tại',
+        details: ['Số ghế đã tồn tại trong toa']
+      },
+      'carriage_id,active_seat_number': {
         code: 'SEAT_NUMBER_DUPLICATED',
         message: 'Số ghế đã tồn tại',
         details: ['Số ghế đã tồn tại trong toa']

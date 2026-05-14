@@ -5,7 +5,7 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { JwtService } from '@nestjs/jwt';
-import { RoleStatus, UserStatus, UserType } from '@prisma/client';
+import { Prisma, RoleStatus, UserStatus, UserType } from '@prisma/client';
 import * as bcrypt from 'bcryptjs';
 import { randomBytes, createHash } from 'crypto';
 import { AppException } from '../../common/exceptions/app.exception';
@@ -23,6 +23,9 @@ type TokenPayload = {
   userType: UserType;
 };
 
+type DatabaseClient = PrismaService | Prisma.TransactionClient;
+type AuthProfile = Awaited<ReturnType<UsersService['findAuthProfileById']>>;
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -32,7 +35,7 @@ export class AuthService {
     private readonly configService: ConfigService
   ) {}
 
-  async register(dto: RegisterDto) {
+  async registerCustomer(dto: RegisterDto) {
     if (!dto.email && !dto.phone) {
       throw new BadRequestException('Email hoặc số điện thoại là bắt buộc');
     }
@@ -48,9 +51,21 @@ export class AuthService {
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
-    const customerRole = await this.prisma.role.findUnique({
-      where: { code: 'CUSTOMER' }
+    const customerRole = await this.prisma.role.findFirst({
+      where: {
+        code: 'CUSTOMER',
+        status: RoleStatus.ACTIVE
+      }
     });
+
+    if (!customerRole) {
+      throw new AppException(
+        'USER_ROLE_NOT_FOUND',
+        'Vai trò khách hàng chưa được cấu hình',
+        500,
+        ['Không tìm thấy vai trò CUSTOMER đang hoạt động']
+      );
+    }
 
     const user = await this.prisma.user.create({
       data: {
@@ -60,20 +75,83 @@ export class AuthService {
         passwordHash,
         userType: UserType.CUSTOMER,
         status: UserStatus.ACTIVE,
-        roles: customerRole
-          ? {
-              create: {
-                roleId: customerRole.id
-              }
-            }
-          : undefined
+        roles: {
+          create: {
+            roleId: customerRole.id
+          }
+        }
       }
     });
 
     return this.issueTokens(user.id);
   }
 
-  async login(dto: LoginDto) {
+  async loginCms(dto: LoginDto) {
+    const user = await this.authenticateUser(dto);
+
+    this.ensureUserTypeAllowed(
+      user.userType,
+      [UserType.STAFF, UserType.SYSTEM],
+      {
+        code: 'AUTH_CMS_LOGIN_FORBIDDEN',
+        message: 'Tài khoản không được phép đăng nhập hệ thống',
+        details: ['Chỉ tài khoản nội bộ mới có quyền truy cập hệ thống CMS']
+      }
+    );
+
+    await this.usersService.updateLastLoginAt(user.id);
+
+    return this.issueTokens(user.id);
+  }
+
+  async loginCustomer(dto: LoginDto) {
+    const user = await this.authenticateUser(dto);
+
+    this.ensureUserTypeAllowed(user.userType, [UserType.CUSTOMER], {
+      code: 'AUTH_CUSTOMER_LOGIN_FORBIDDEN',
+      message: 'Tài khoản không được phép đăng nhập ứng dụng khách hàng',
+      details: ['Chỉ tài khoản khách hàng mới có quyền truy cập API client']
+    });
+
+    await this.usersService.updateLastLoginAt(user.id);
+
+    return this.issueTokens(user.id);
+  }
+
+  async refreshCms(dto: RefreshTokenDto) {
+    return this.refreshForUserTypes(dto, [UserType.STAFF, UserType.SYSTEM], {
+      code: 'AUTH_CMS_REFRESH_FORBIDDEN',
+      message: 'Phiên đăng nhập không được phép làm mới trên hệ thống',
+      details: ['Refresh token không thuộc tài khoản nội bộ']
+    });
+  }
+
+  async refreshCustomer(dto: RefreshTokenDto) {
+    return this.refreshForUserTypes(dto, [UserType.CUSTOMER], {
+      code: 'AUTH_CUSTOMER_REFRESH_FORBIDDEN',
+      message:
+        'Phiên đăng nhập không được phép làm mới trên ứng dụng khách hàng',
+      details: ['Refresh token không thuộc tài khoản khách hàng']
+    });
+  }
+
+  async meCms(userId: string) {
+    return this.meForUserTypes(userId, [UserType.STAFF, UserType.SYSTEM], {
+      code: 'AUTH_CMS_PROFILE_FORBIDDEN',
+      message: 'Tài khoản không được phép truy cập hồ sơ hệ thống',
+      details: ['Chỉ tài khoản nội bộ mới có quyền truy cập hồ sơ CMS']
+    });
+  }
+
+  async meCustomer(userId: string) {
+    return this.meForUserTypes(userId, [UserType.CUSTOMER], {
+      code: 'AUTH_CUSTOMER_PROFILE_FORBIDDEN',
+      message: 'Tài khoản không được phép truy cập hồ sơ khách hàng',
+      details: ['Chỉ tài khoản khách hàng mới có quyền truy cập hồ sơ client']
+    });
+  }
+
+  private async authenticateUser(dto: LoginDto) {
     const user = await this.findUserForLogin(dto.identifier);
 
     if (!user?.passwordHash || user.status !== UserStatus.ACTIVE) {
@@ -99,27 +177,58 @@ export class AuthService {
       );
     }
 
-    await this.usersService.updateLastLoginAt(user.id);
-
-    return this.issueTokens(user.id);
+    return user;
   }
 
-  async refresh(dto: RefreshTokenDto) {
+  private async refreshForUserTypes(
+    dto: RefreshTokenDto,
+    allowedTypes: UserType[],
+    forbiddenError: { code: string; message: string; details: string[] }
+  ) {
     const tokenHash = this.hashToken(dto.refreshToken);
-    const refreshToken = await this.findActiveRefreshToken(tokenHash);
 
-    if (!refreshToken || refreshToken.user.status !== UserStatus.ACTIVE) {
-      throw new AppException(
-        'AUTH_TOKEN_EXPIRED',
-        'Phiên đăng nhập đã hết hạn',
-        401,
-        ['Refresh token không hợp lệ hoặc đã hết hạn']
+    return this.prisma.$transaction(async (tx) => {
+      const refreshToken = await this.findActiveRefreshToken(tokenHash, tx);
+
+      if (!refreshToken || refreshToken.user.status !== UserStatus.ACTIVE) {
+        throw new AppException(
+          'AUTH_TOKEN_EXPIRED',
+          'Phiên đăng nhập đã hết hạn',
+          401,
+          ['Refresh token không hợp lệ hoặc đã hết hạn']
+        );
+      }
+
+      this.ensureUserTypeAllowed(
+        refreshToken.user.userType,
+        allowedTypes,
+        forbiddenError
       );
-    }
 
-    await this.revokeRefreshToken(tokenHash);
+      const revokedToken = await tx.refreshToken.updateMany({
+        where: {
+          id: refreshToken.id,
+          revokedAt: null,
+          expiresAt: {
+            gt: new Date()
+          }
+        },
+        data: {
+          revokedAt: new Date()
+        }
+      });
 
-    return this.issueTokens(refreshToken.userId);
+      if (revokedToken.count !== 1) {
+        throw new AppException(
+          'AUTH_TOKEN_EXPIRED',
+          'Phiên đăng nhập đã hết hạn',
+          401,
+          ['Refresh token không hợp lệ hoặc đã hết hạn']
+        );
+      }
+
+      return this.issueTokens(refreshToken.userId, tx);
+    });
   }
 
   async logout(refreshToken: string) {
@@ -130,12 +239,18 @@ export class AuthService {
     };
   }
 
-  async me(userId: string) {
+  private async meForUserTypes(
+    userId: string,
+    allowedTypes: UserType[],
+    forbiddenError: { code: string; message: string; details: string[] }
+  ) {
     const user = await this.usersService.findAuthProfileById(userId);
 
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
     }
+
+    this.ensureUserTypeAllowed(user.userType, allowedTypes, forbiddenError);
 
     return this.toAuthProfile(user);
   }
@@ -148,8 +263,11 @@ export class AuthService {
     return this.usersService.findByPhone(identifier);
   }
 
-  createRefreshToken(dto: CreateRefreshTokenDto) {
-    return this.prisma.refreshToken.create({
+  createRefreshToken(
+    dto: CreateRefreshTokenDto,
+    client: DatabaseClient = this.prisma
+  ) {
+    return client.refreshToken.create({
       data: {
         userId: dto.userId,
         tokenHash: dto.tokenHash,
@@ -161,8 +279,11 @@ export class AuthService {
     });
   }
 
-  findActiveRefreshToken(tokenHash: string) {
-    return this.prisma.refreshToken.findFirst({
+  findActiveRefreshToken(
+    tokenHash: string,
+    client: DatabaseClient = this.prisma
+  ) {
+    return client.refreshToken.findFirst({
       where: {
         tokenHash,
         revokedAt: null,
@@ -177,8 +298,11 @@ export class AuthService {
   }
 
   revokeRefreshToken(tokenHash: string) {
-    return this.prisma.refreshToken.update({
-      where: { tokenHash },
+    return this.prisma.refreshToken.updateMany({
+      where: {
+        tokenHash,
+        revokedAt: null
+      },
       data: {
         revokedAt: new Date()
       }
@@ -197,8 +321,23 @@ export class AuthService {
     });
   }
 
-  private async issueTokens(userId: string) {
-    const user = await this.usersService.findAuthProfileById(userId);
+  private ensureUserTypeAllowed(
+    userType: UserType,
+    allowedTypes: UserType[],
+    error: { code: string; message: string; details: string[] }
+  ) {
+    if (allowedTypes.includes(userType)) {
+      return;
+    }
+
+    throw new AppException(error.code, error.message, 403, error.details);
+  }
+
+  private async issueTokens(
+    userId: string,
+    client: DatabaseClient = this.prisma
+  ) {
+    const user = await this.findAuthProfileById(userId, client);
 
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
@@ -211,11 +350,14 @@ export class AuthService {
     });
     const refreshToken = randomBytes(48).toString('base64url');
 
-    await this.createRefreshToken({
-      userId: user.id.toString(),
-      tokenHash: this.hashToken(refreshToken),
-      expiresAt: this.resolveRefreshExpiresAt()
-    });
+    await this.createRefreshToken(
+      {
+        userId: user.id.toString(),
+        tokenHash: this.hashToken(refreshToken),
+        expiresAt: this.resolveRefreshExpiresAt()
+      },
+      client
+    );
 
     return {
       data: {
@@ -229,6 +371,30 @@ export class AuthService {
 
   private hashToken(token: string) {
     return createHash('sha256').update(token).digest('hex');
+  }
+
+  private findAuthProfileById(userId: string, client: DatabaseClient) {
+    return client.user.findFirst({
+      where: {
+        id: userId,
+        deletedAt: null
+      },
+      include: {
+        roles: {
+          include: {
+            role: {
+              include: {
+                permissions: {
+                  include: {
+                    permission: true
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    });
   }
 
   private resolveRefreshExpiresAt() {
@@ -253,9 +419,7 @@ export class AuthService {
     );
   }
 
-  private toTokenPayload(
-    user: Awaited<ReturnType<UsersService['findAuthProfileById']>>
-  ): TokenPayload {
+  private toTokenPayload(user: AuthProfile): TokenPayload {
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
     }
@@ -268,9 +432,7 @@ export class AuthService {
     };
   }
 
-  private toAuthProfile(
-    user: Awaited<ReturnType<UsersService['findAuthProfileById']>>
-  ) {
+  private toAuthProfile(user: AuthProfile) {
     if (!user) {
       throw new UnauthorizedException('Người dùng không tồn tại');
     }

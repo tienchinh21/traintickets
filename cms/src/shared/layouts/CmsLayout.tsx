@@ -7,6 +7,7 @@ import {
   MenuUnfoldOutlined,
   SolutionOutlined,
   SafetyCertificateOutlined,
+  ScheduleOutlined,
   ShareAltOutlined,
   TagsOutlined,
   TeamOutlined,
@@ -50,6 +51,11 @@ const menuItems: MenuProps['items'] = [
         key: '/trains',
         icon: <TruckOutlined />,
         label: 'Tàu',
+      },
+      {
+        key: '/trips',
+        icon: <ScheduleOutlined />,
+        label: 'Chuyến',
       },
       {
         key: '/seat-types',

@@ -33,7 +33,7 @@ import { TrainsService } from './trains.service';
 @ApiTags('trains')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@Controller('trains')
+@Controller('cms/trains')
 export class TrainsController {
   constructor(private readonly trainsService: TrainsService) {}
 

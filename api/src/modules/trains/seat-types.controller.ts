@@ -33,7 +33,7 @@ import { SeatTypesService } from './seat-types.service';
 @ApiTags('seat-types')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard, PermissionsGuard)
-@Controller('seat-types')
+@Controller('cms/seat-types')
 export class SeatTypesController {
   constructor(private readonly seatTypesService: SeatTypesService) {}
 

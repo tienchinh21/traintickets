@@ -49,8 +49,10 @@ export type RouteDetail = Route & {
   stops: RouteStop[]
 }
 
-export type RouteFormValues = components['schemas']['CreateRouteDto']
-export type UpdateRoutePayload = components['schemas']['UpdateRouteDto']
+export type RouteFormValues = Omit<components['schemas']['CreateRouteDto'], 'code'> & {
+  code?: string
+}
+export type UpdateRoutePayload = Partial<RouteFormValues>
 
 export type TrainStatus = 'ACTIVE' | 'MAINTENANCE' | 'INACTIVE'
 
@@ -84,8 +86,12 @@ export type Carriage = Record<string, unknown> & {
   deletedAt: string | null
 }
 
-export type CarriageFormValues = components['schemas']['CreateCarriageDto']
-export type UpdateCarriagePayload = components['schemas']['UpdateCarriageDto']
+export type CarriageFormValues = Omit<components['schemas']['CreateCarriageDto'], 'carriageNumber' | 'name' | 'seatMapLayout'> & {
+  carriageNumber?: number
+  name?: string
+  seatMapLayout?: Record<string, unknown>
+}
+export type UpdateCarriagePayload = Partial<CarriageFormValues>
 
 export type SeatType = Record<string, unknown> & {
   id: string
@@ -121,3 +127,112 @@ export type Seat = Record<string, unknown> & {
 
 export type SeatFormValues = components['schemas']['CreateSeatDto']
 export type UpdateSeatPayload = components['schemas']['UpdateSeatDto']
+
+export type TripStatus = 'DRAFT' | 'OPEN' | 'CLOSED' | 'CANCELLED'
+
+export type TripRouteSummary = Pick<Route, 'id' | 'code' | 'name' | 'status'>
+export type TripTrainSummary = Pick<Train, 'id' | 'code' | 'name' | 'status'>
+
+export type Trip = Record<string, unknown> & {
+  id: string
+  routeId: string
+  trainId: string
+  code: string
+  serviceDate: string
+  status: TripStatus
+  createdAt: string
+  updatedAt: string
+  deletedAt: string | null
+  route: TripRouteSummary
+  train: TripTrainSummary
+}
+
+export type TripStop = Record<string, unknown> & {
+  id: string
+  tripId: string
+  stationId: string
+  stopOrder: number
+  scheduledArrivalAt: string | null
+  scheduledDepartureAt: string | null
+  distanceFromStartKm: string | number
+  station: Station
+}
+
+export type TripDetail = Trip & {
+  stops: TripStop[]
+}
+
+export type TripFormValues = {
+  routeId: string
+  trainId: string
+  code?: string
+  serviceDate: string
+  status: TripStatus
+}
+
+export type UpdateTripPayload = Partial<TripFormValues>
+
+export type TripQuery = {
+  page?: number
+  limit?: number
+  search?: string
+  status?: TripStatus
+  routeId?: string
+  trainId?: string
+  serviceDate?: string
+}
+
+export type TripSearchPayload = {
+  fromStationId: string
+  toStationId: string
+  serviceDate: string
+  status?: TripStatus
+  page?: number
+  limit?: number
+}
+
+export type TripListMeta = {
+  page: number
+  limit: number
+  total: number
+  totalPages: number
+}
+
+export type GeneratedCode = {
+  code: string
+}
+
+export type CarriageSuggestion = {
+  carriageNumber: number
+  name: string
+}
+
+export type SeatGenerationLayoutType = 'SEAT_GRID' | 'SLEEPER_ROOM'
+export type SeatGenerationNumbering = 'ROW_COLUMN' | 'NUMERIC' | 'ROOM_BED'
+
+export type SeatGenerationPayload = {
+  seatTypeId: string
+  layoutType: SeatGenerationLayoutType
+  rows?: number
+  columns?: number
+  rooms?: number
+  bedsPerRoom?: number
+  numbering: SeatGenerationNumbering
+  status: SeatStatus
+  previewOnly: boolean
+}
+
+export type GeneratedSeat = Record<string, unknown> & {
+  carriageId: string
+  seatTypeId: string
+  seatNumber: string
+  rowNumber: number | null
+  columnNumber: number | null
+  floorNumber: number | null
+  status: SeatStatus
+}
+
+export type SeatGenerationResult = {
+  created?: number
+  seats: GeneratedSeat[]
+}

@@ -8,6 +8,7 @@ import { AppException } from '../../common/exceptions/app.exception';
 import { getPaginationOffset } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../database/prisma/prisma.service';
 import { CreateRouteDto } from './dto/create-route.dto';
+import { GenerateRouteCodeDto } from './dto/generate-route-code.dto';
 import { RouteQueryDto } from './dto/route-query.dto';
 import { RouteStopDto } from './dto/route-stop.dto';
 import { UpdateRouteDto } from './dto/update-route.dto';
@@ -34,11 +35,13 @@ export class RoutesService {
 
   async create(dto: CreateRouteDto) {
     await this.validateStops(dto.stops);
+    const code = dto.code ?? (await this.generateCodeFromStops(dto.stops));
+    await this.ensureCodeIsUnique(code);
 
     await this.prisma.$transaction(async (tx) => {
       const createdRoute = await tx.route.create({
         data: {
-          code: dto.code,
+          code,
           name: dto.name,
           description: dto.description,
           status: dto.status
@@ -52,6 +55,15 @@ export class RoutesService {
 
     return {
       message: 'Tạo tuyến thành công'
+    };
+  }
+
+  async generateCode(dto: GenerateRouteCodeDto) {
+    return {
+      data: {
+        code: await this.generateRouteCode(dto.fromStationId, dto.toStationId)
+      },
+      message: 'Tạo mã tuyến thành công'
     };
   }
 
@@ -114,6 +126,10 @@ export class RoutesService {
 
     if (dto.stops) {
       await this.validateStops(dto.stops);
+    }
+
+    if (dto.code) {
+      await this.ensureCodeIsUnique(dto.code, id);
     }
 
     await this.prisma.$transaction(async (tx) => {
@@ -236,6 +252,120 @@ export class RoutesService {
       defaultArrivalOffsetMinutes: stop.defaultArrivalOffsetMinutes,
       defaultDepartureOffsetMinutes: stop.defaultDepartureOffsetMinutes
     }));
+  }
+
+  private async generateCodeFromStops(stops: RouteStopDto[]) {
+    const orderedStops = [...stops].sort((a, b) => a.stopOrder - b.stopOrder);
+    return this.generateRouteCode(
+      orderedStops[0].stationId,
+      orderedStops[orderedStops.length - 1].stationId
+    );
+  }
+
+  private async generateRouteCode(fromStationId: string, toStationId: string) {
+    if (fromStationId === toStationId) {
+      throw new AppException(
+        'ROUTE_CODE_INVALID_STATIONS',
+        'Ga đầu và ga cuối phải khác nhau',
+        undefined,
+        ['Không thể sinh mã tuyến từ cùng một ga']
+      );
+    }
+
+    const stations = await this.prisma.station.findMany({
+      where: {
+        id: {
+          in: [fromStationId, toStationId]
+        },
+        deletedAt: null,
+        status: StationStatus.ACTIVE
+      },
+      select: {
+        id: true,
+        code: true
+      }
+    });
+    const fromStation = stations.find(
+      (station) => station.id === fromStationId
+    );
+    const toStation = stations.find((station) => station.id === toStationId);
+
+    if (!fromStation || !toStation) {
+      throw new AppException(
+        'ROUTE_CODE_STATION_NOT_FOUND',
+        'Ga sinh mã tuyến không hợp lệ',
+        undefined,
+        ['Ga đầu và ga cuối phải tồn tại, chưa bị xóa mềm và đang ACTIVE']
+      );
+    }
+
+    const baseCode = `${this.getStationRouteCode(fromStation.code)}-${this.getStationRouteCode(toStation.code)}`;
+    const existingRoutes = await this.prisma.route.findMany({
+      where: {
+        code: {
+          startsWith: baseCode
+        }
+      },
+      select: {
+        code: true
+      }
+    });
+    const usedSuffixes = new Set<number>();
+
+    for (const route of existingRoutes) {
+      if (route.code === baseCode) {
+        usedSuffixes.add(1);
+        continue;
+      }
+
+      const suffix = route.code.match(new RegExp(`^${baseCode}-(\\d{2})$`));
+      if (suffix) {
+        usedSuffixes.add(Number(suffix[1]));
+      }
+    }
+
+    if (!usedSuffixes.has(1)) {
+      return baseCode;
+    }
+
+    let nextSuffix = 2;
+    while (usedSuffixes.has(nextSuffix)) {
+      nextSuffix += 1;
+    }
+
+    return `${baseCode}-${nextSuffix.toString().padStart(2, '0')}`;
+  }
+
+  private async ensureCodeIsUnique(code: string, excludeId?: string) {
+    const existingRoute = await this.prisma.route.findFirst({
+      where: {
+        code,
+        ...(excludeId ? { id: { not: excludeId } } : {})
+      },
+      select: {
+        id: true
+      }
+    });
+
+    if (existingRoute) {
+      throw new AppException(
+        'ROUTE_CODE_DUPLICATED',
+        'Mã tuyến đã tồn tại',
+        undefined,
+        [`Mã tuyến ${code} đã tồn tại`]
+      );
+    }
+  }
+
+  private getStationRouteCode(stationCode: string) {
+    const aliases: Record<string, string> = {
+      HAN: 'HN',
+      DAD: 'DN',
+      SGN: 'SG',
+      SAI: 'SG'
+    };
+
+    return aliases[stationCode] ?? stationCode;
   }
 
   private serializeRoute(route: RouteWithStops) {

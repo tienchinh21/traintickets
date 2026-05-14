@@ -1,10 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { UserStatus, UserType } from '@prisma/client';
+import { Type } from 'class-transformer';
 import {
   IsEmail,
   IsEnum,
+  IsInt,
   IsOptional,
   IsString,
+  Min,
+  MinLength,
   MaxLength
 } from 'class-validator';
 
@@ -28,15 +32,16 @@ export class CreateUserDto {
   @MaxLength(30)
   phone?: string;
 
-  @ApiPropertyOptional({
-    example: '$2b$12$...',
+  @ApiProperty({
+    example: 'Admin-sSjRqGa9JH-6#1',
+    minLength: 8,
     maxLength: 255,
-    description: 'Hash mật khẩu, không phải mật khẩu thô'
+    description: 'Mật khẩu đăng nhập. BE sẽ tự hash trước khi lưu.'
   })
-  @IsOptional()
   @IsString()
+  @MinLength(8)
   @MaxLength(255)
-  passwordHash?: string;
+  password!: string;
 
   @ApiProperty({
     example: 'Nguyễn Văn A',
@@ -62,4 +67,15 @@ export class CreateUserDto {
   })
   @IsEnum(UserStatus)
   status: UserStatus = UserStatus.ACTIVE;
+
+  @ApiPropertyOptional({
+    type: [Number],
+    example: [1, 2],
+    description: 'Danh sách ID vai trò gán cho người dùng'
+  })
+  @IsOptional()
+  @Type(() => Number)
+  @IsInt({ each: true })
+  @Min(1, { each: true })
+  roleIds?: number[];
 }

@@ -7,12 +7,14 @@ import queueConfig from './config/queue.config';
 import redisConfig from './config/redis.config';
 import { PrismaModule } from './database/prisma/prisma.module';
 import { HealthModule } from './health/health.module';
+import { AdministrativeDivisionsModule } from './modules/administrative-divisions/administrative-divisions.module';
 import { AuditLogsModule } from './modules/audit-logs/audit-logs.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PermissionsModule } from './modules/permissions/permissions.module';
 import { RolesModule } from './modules/roles/roles.module';
 import { RoutesModule } from './modules/routes/routes.module';
 import { StationsModule } from './modules/stations/stations.module';
+import { TripsModule } from './modules/trips/trips.module';
 import { TrainsModule } from './modules/trains/trains.module';
 import { UsersModule } from './modules/users/users.module';
 
@@ -26,6 +28,7 @@ import { UsersModule } from './modules/users/users.module';
     }),
     PrismaModule,
     HealthModule,
+    AdministrativeDivisionsModule,
     UsersModule,
     AuthModule,
     AuditLogsModule,
@@ -33,6 +36,7 @@ import { UsersModule } from './modules/users/users.module';
     PermissionsModule,
     StationsModule,
     RoutesModule,
+    TripsModule,
     TrainsModule
   ]
 })

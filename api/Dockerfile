@@ -12,6 +12,7 @@ WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json ./
 COPY nest-cli.json tsconfig.json tsconfig.build.json ./
+COPY data ./data
 COPY prisma ./prisma
 COPY src ./src
 

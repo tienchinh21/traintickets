@@ -166,6 +166,7 @@ export class RoutesService {
     await this.prisma.route.update({
       where: { id },
       data: {
+        status: 'INACTIVE',
         deletedAt: new Date()
       }
     });
@@ -340,6 +341,7 @@ export class RoutesService {
     const existingRoute = await this.prisma.route.findFirst({
       where: {
         code,
+        deletedAt: null,
         ...(excludeId ? { id: { not: excludeId } } : {})
       },
       select: {

@@ -13,7 +13,12 @@ async function bootstrap() {
   const reflector = app.get(Reflector);
 
   app.enableShutdownHooks();
-  app.enableCors();
+
+  const allowedOrigins = configService.get<string>('app.corsOrigins');
+  app.enableCors({
+    origin: allowedOrigins ? allowedOrigins.split(',') : false,
+    credentials: true
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({

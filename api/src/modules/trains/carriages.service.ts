@@ -181,6 +181,7 @@ export class CarriagesService {
     await this.prisma.carriage.update({
       where: { id },
       data: {
+        status: 'INACTIVE',
         deletedAt: new Date()
       }
     });

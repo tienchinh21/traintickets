@@ -208,6 +208,7 @@ export class SeatsService {
     await this.prisma.seat.update({
       where: { id },
       data: {
+        status: 'INACTIVE',
         deletedAt: new Date()
       }
     });

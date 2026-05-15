@@ -3,7 +3,8 @@ import {
   Catch,
   ExceptionFilter,
   HttpException,
-  HttpStatus
+  HttpStatus,
+  Logger
 } from '@nestjs/common';
 import { Prisma } from '@prisma/client';
 import { Response } from 'express';
@@ -16,9 +17,20 @@ type ErrorResponseBody = {
 
 @Catch()
 export class AllExceptionsFilter implements ExceptionFilter {
+  private readonly logger = new Logger(AllExceptionsFilter.name);
+
   catch(exception: unknown, host: ArgumentsHost) {
     const response = host.switchToHttp().getResponse<Response>();
     const normalizedError = this.normalizeException(exception);
+
+    if (normalizedError.status >= 500) {
+      this.logger.error(
+        `[${normalizedError.code}] ${normalizedError.message}`,
+        exception instanceof Error ? exception.stack : undefined
+      );
+    } else if (normalizedError.status >= 400) {
+      this.logger.warn(`[${normalizedError.code}] ${normalizedError.message}`);
+    }
 
     response.status(normalizedError.status).json({
       success: false,

@@ -105,6 +105,7 @@ export class StationsService {
     await this.prisma.station.update({
       where: { id },
       data: {
+        status: 'INACTIVE',
         deletedAt: new Date()
       }
     });
@@ -126,6 +127,7 @@ export class StationsService {
     const existingStation = await this.prisma.station.findFirst({
       where: {
         code,
+        deletedAt: null,
         ...(excludeId ? { id: { not: excludeId } } : {})
       },
       select: {

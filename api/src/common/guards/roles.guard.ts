@@ -1,20 +1,26 @@
 import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { ROLES_KEY } from '../decorators/roles.decorator';
-
-type RequestUser = {
-  roles?: Array<string | { code?: string }>;
-};
+import { PrismaService } from '../../database/prisma/prisma.service';
+import { AuthenticatedUser } from './jwt-auth.guard';
 
 type RequestWithUser = {
-  user?: RequestUser;
+  user?: AuthenticatedUser;
 };
 
+/**
+ * RolesGuard checks user roles from DB at runtime.
+ * JWT does NOT contain roles, so we query user_roles -> role.
+ * Use @Roles('SUPER_ADMIN', 'OPERATOR') on handlers.
+ */
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(private readonly reflector: Reflector) {}
+  constructor(
+    private readonly reflector: Reflector,
+    private readonly prisma: PrismaService
+  ) {}
 
-  canActivate(context: ExecutionContext): boolean {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const requiredRoles = this.reflector.getAllAndOverride<string[]>(
       ROLES_KEY,
       [context.getHandler(), context.getClass()]
@@ -25,11 +31,31 @@ export class RolesGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<RequestWithUser>();
-    const userRoles = request.user?.roles ?? [];
-    const userRoleCodes = userRoles.map((role) =>
-      typeof role === 'string' ? role : role.code
-    );
+    const userId = request.user?.sub;
 
-    return requiredRoles.some((role) => userRoleCodes.includes(role));
+    if (!userId) {
+      return false;
+    }
+
+    const userRole = await this.prisma.userRole.findFirst({
+      where: {
+        userId,
+        user: {
+          deletedAt: null,
+          status: 'ACTIVE'
+        },
+        role: {
+          code: {
+            in: requiredRoles
+          },
+          status: 'ACTIVE'
+        }
+      },
+      select: {
+        id: true
+      }
+    });
+
+    return Boolean(userRole);
   }
 }

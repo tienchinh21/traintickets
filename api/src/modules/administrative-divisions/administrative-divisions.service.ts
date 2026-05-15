@@ -212,21 +212,46 @@ export class AdministrativeDivisionsService {
       }
     });
 
-    const response = await fetch(url);
-    const payload = await response.json().catch(() => null);
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10_000);
 
-    if (!response.ok) {
+    try {
+      const response = await fetch(url, { signal: controller.signal });
+      clearTimeout(timeoutId);
+
+      const payload = await response.json().catch(() => null);
+
+      if (!response.ok) {
+        throw new HttpException(
+          {
+            message: 'Không lấy được dữ liệu địa giới hành chính',
+            upstreamUrl: url.toString(),
+            upstreamResponse: payload
+          },
+          response.status
+        );
+      }
+
+      return payload;
+    } catch (error) {
+      clearTimeout(timeoutId);
+
+      if (error instanceof HttpException) {
+        throw error;
+      }
+
+      const isAbort = error instanceof Error && error.name === 'AbortError';
+
       throw new HttpException(
         {
-          message: 'Không lấy được dữ liệu địa giới hành chính',
-          upstreamUrl: url.toString(),
-          upstreamResponse: payload
+          message: isAbort
+            ? 'Hết thời gian chờ kết nối đến nguồn dữ liệu địa giới hành chính'
+            : 'Không thể kết nối đến nguồn dữ liệu địa giới hành chính',
+          upstreamUrl: url.toString()
         },
-        response.status
+        503
       );
     }
-
-    return payload;
   }
 
   private createDocumentSummary(

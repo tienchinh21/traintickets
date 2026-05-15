@@ -50,11 +50,28 @@ export class TransformResponseInterceptor<T> implements NestInterceptor<
   }
 
   private isEnvelope(payload: T): payload is T & ResponseEnvelope<T> {
-    return (
-      typeof payload === 'object' &&
-      payload !== null &&
-      ('data' in payload || 'meta' in payload || 'message' in payload)
-    );
+    if (typeof payload !== 'object' || payload === null) {
+      return false;
+    }
+
+    // Only treat as envelope if it has 'data' or 'message' key AND
+    // does NOT look like a regular DB record (has createdAt/updatedAt/id)
+    const hasEnvelopeKeys =
+      'data' in payload || 'meta' in payload || 'message' in payload;
+
+    if (!hasEnvelopeKeys) {
+      return false;
+    }
+
+    // If it has typical entity fields, it's a DB record, not an envelope
+    const hasEntityFields =
+      'id' in payload || 'createdAt' in payload || 'updatedAt' in payload;
+
+    if (hasEntityFields && !('meta' in payload)) {
+      return false;
+    }
+
+    return true;
   }
 
   private serialize(value: unknown): unknown {

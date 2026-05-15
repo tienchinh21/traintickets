@@ -262,6 +262,7 @@ export class TripsService {
     await this.prisma.trip.update({
       where: { id },
       data: {
+        status: 'CANCELLED',
         deletedAt: new Date()
       }
     });
@@ -278,16 +279,20 @@ export class TripsService {
 
     const page = dto.page ?? 1;
     const limit = dto.limit ?? 20;
+
+    // Find trips that contain BOTH stations and fromStation comes before toStation
     const where: Prisma.TripWhereInput = {
       deletedAt: null,
       status: dto.status ?? TripStatus.OPEN,
       serviceDate: this.parseServiceDate(dto.serviceDate),
-      stops: {
-        some: {
-          stationId: dto.fromStationId
-        }
-      },
       AND: [
+        {
+          stops: {
+            some: {
+              stationId: dto.fromStationId
+            }
+          }
+        },
         {
           stops: {
             some: {
@@ -298,36 +303,38 @@ export class TripsService {
       ]
     };
 
-    const trips = await this.prisma.trip.findMany({
+    // Count total matching trips (with direction check in app layer)
+    const allTrips = await this.prisma.trip.findMany({
       where,
       include: tripInclude,
       orderBy: [{ serviceDate: 'asc' }, { code: 'asc' }]
     });
 
-    const matchedTrips = trips
-      .map((trip) => this.serializeTrip(trip))
-      .filter((trip) => {
-        const fromStop = trip.stops.find(
-          (stop) => stop.stationId === dto.fromStationId
-        );
-        const toStop = trip.stops.find(
-          (stop) => stop.stationId === dto.toStationId
-        );
+    // Filter by direction: fromStation.stopOrder < toStation.stopOrder
+    const matchedTrips = allTrips.filter((trip) => {
+      const fromStop = trip.stops.find(
+        (stop) => stop.stationId === dto.fromStationId
+      );
+      const toStop = trip.stops.find(
+        (stop) => stop.stationId === dto.toStationId
+      );
 
-        return fromStop && toStop && fromStop.stopOrder < toStop.stopOrder;
-      });
-    const pagedTrips = matchedTrips.slice(
-      getPaginationOffset(page, limit),
-      getPaginationOffset(page, limit) + limit
-    );
+      return fromStop && toStop && fromStop.stopOrder < toStop.stopOrder;
+    });
+
+    const total = matchedTrips.length;
+    const offset = getPaginationOffset(page, limit);
+    const pagedTrips = matchedTrips
+      .slice(offset, offset + limit)
+      .map((trip) => this.serializeTrip(trip));
 
     return {
       data: pagedTrips,
       meta: {
         page,
         limit,
-        total: matchedTrips.length,
-        totalPages: Math.ceil(matchedTrips.length / limit)
+        total,
+        totalPages: Math.ceil(total / limit)
       },
       message: 'Tìm chuyến thành công'
     };

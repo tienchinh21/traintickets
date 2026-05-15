@@ -27,26 +27,59 @@ export class UsersService {
 
   async create(dto: CreateUserDto) {
     await this.ensureContactIsValid(dto.email, dto.phone);
-    await this.ensureContactIsUnique(dto.email, dto.phone);
     await this.ensureRolesExist(dto.roleIds);
 
     const passwordHash = await bcrypt.hash(dto.password, 12);
-    await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        phone: dto.phone,
-        fullName: dto.fullName,
-        passwordHash,
-        userType: dto.userType,
-        status: dto.status,
-        roles: dto.roleIds?.length
-          ? {
-              create: dto.roleIds.map((roleId) => ({
-                roleId: BigInt(roleId)
-              }))
-            }
-          : undefined
+
+    await this.prisma.$transaction(async (tx) => {
+      // Check uniqueness inside transaction to prevent race conditions
+      if (dto.email) {
+        const existingEmail = await tx.user.findFirst({
+          where: { email: dto.email, deletedAt: null },
+          select: { id: true }
+        });
+        if (existingEmail) {
+          throw new AppException(
+            'USER_EMAIL_DUPLICATED',
+            'Email đã tồn tại',
+            400,
+            [`Email ${dto.email} đã tồn tại`]
+          );
+        }
       }
+
+      if (dto.phone) {
+        const existingPhone = await tx.user.findFirst({
+          where: { phone: dto.phone, deletedAt: null },
+          select: { id: true }
+        });
+        if (existingPhone) {
+          throw new AppException(
+            'USER_PHONE_DUPLICATED',
+            'Số điện thoại đã tồn tại',
+            400,
+            [`Số điện thoại ${dto.phone} đã tồn tại`]
+          );
+        }
+      }
+
+      await tx.user.create({
+        data: {
+          email: dto.email,
+          phone: dto.phone,
+          fullName: dto.fullName,
+          passwordHash,
+          userType: dto.userType,
+          status: dto.status,
+          roles: dto.roleIds?.length
+            ? {
+                create: dto.roleIds.map((roleId) => ({
+                  roleId: BigInt(roleId)
+                }))
+              }
+            : undefined
+        }
+      });
     });
 
     return {

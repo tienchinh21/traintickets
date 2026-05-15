@@ -40,47 +40,60 @@ export class AuthService {
       throw new BadRequestException('Email hoặc số điện thoại là bắt buộc');
     }
 
-    const existingUser = await this.usersService.findByEmailOrPhone(
-      dto.email,
-      dto.phone
-    );
-
-    if (existingUser) {
-      throw new BadRequestException('Email hoặc số điện thoại đã được sử dụng');
-    }
-
     const passwordHash = await bcrypt.hash(dto.password, 12);
 
-    const customerRole = await this.prisma.role.findFirst({
-      where: {
-        code: 'CUSTOMER',
-        status: RoleStatus.ACTIVE
+    const user = await this.prisma.$transaction(async (tx) => {
+      const existingUser = await tx.user.findFirst({
+        where: {
+          deletedAt: null,
+          OR: [
+            ...(dto.email ? [{ email: dto.email }] : []),
+            ...(dto.phone ? [{ phone: dto.phone }] : [])
+          ]
+        },
+        select: { id: true }
+      });
+
+      if (existingUser) {
+        throw new AppException(
+          'USER_EMAIL_DUPLICATED',
+          'Email hoặc số điện thoại đã được sử dụng',
+          400,
+          ['Email hoặc số điện thoại đã được sử dụng']
+        );
       }
-    });
 
-    if (!customerRole) {
-      throw new AppException(
-        'USER_ROLE_NOT_FOUND',
-        'Vai trò khách hàng chưa được cấu hình',
-        500,
-        ['Không tìm thấy vai trò CUSTOMER đang hoạt động']
-      );
-    }
+      const customerRole = await tx.role.findFirst({
+        where: {
+          code: 'CUSTOMER',
+          status: RoleStatus.ACTIVE
+        }
+      });
 
-    const user = await this.prisma.user.create({
-      data: {
-        email: dto.email,
-        phone: dto.phone,
-        fullName: dto.fullName,
-        passwordHash,
-        userType: UserType.CUSTOMER,
-        status: UserStatus.ACTIVE,
-        roles: {
-          create: {
-            roleId: customerRole.id
+      if (!customerRole) {
+        throw new AppException(
+          'USER_ROLE_NOT_FOUND',
+          'Vai trò khách hàng chưa được cấu hình',
+          500,
+          ['Không tìm thấy vai trò CUSTOMER đang hoạt động']
+        );
+      }
+
+      return tx.user.create({
+        data: {
+          email: dto.email,
+          phone: dto.phone,
+          fullName: dto.fullName,
+          passwordHash,
+          userType: UserType.CUSTOMER,
+          status: UserStatus.ACTIVE,
+          roles: {
+            create: {
+              roleId: customerRole.id
+            }
           }
         }
-      }
+      });
     });
 
     return this.issueTokens(user.id);
@@ -100,6 +113,7 @@ export class AuthService {
     );
 
     await this.usersService.updateLastLoginAt(user.id);
+    await this.revokeUserRefreshTokens(user.id);
 
     return this.issueTokens(user.id);
   }
@@ -114,6 +128,7 @@ export class AuthService {
     });
 
     await this.usersService.updateLastLoginAt(user.id);
+    await this.revokeUserRefreshTokens(user.id);
 
     return this.issueTokens(user.id);
   }

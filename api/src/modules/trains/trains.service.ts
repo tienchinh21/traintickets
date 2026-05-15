@@ -123,6 +123,7 @@ export class TrainsService {
     await this.prisma.train.update({
       where: { id },
       data: {
+        status: 'INACTIVE',
         deletedAt: new Date()
       }
     });
@@ -153,6 +154,7 @@ export class TrainsService {
     const existingTrain = await this.prisma.train.findFirst({
       where: {
         code,
+        deletedAt: null,
         ...(excludeId ? { id: { not: excludeId } } : {})
       },
       select: {

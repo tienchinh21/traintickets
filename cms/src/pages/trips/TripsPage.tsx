@@ -18,7 +18,7 @@ import {
 } from 'antd'
 import type { Dayjs } from 'dayjs'
 import dayjs from 'dayjs'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { operationsApi } from '@/features/operations/api/operationsApi'
 import type {
@@ -34,6 +34,7 @@ import type {
 } from '@/features/operations/types/operations.types'
 import { getApiErrorMessage } from '@/shared/api/errors'
 import { PageHeader } from '@/shared/components/PageHeader'
+import { useUrlQuery } from '@/shared/hooks/useUrlQuery'
 import { CoreTable, createActionColumn } from '@/shared/components/table'
 import type { ProColumns } from '@/shared/components/table'
 
@@ -49,9 +50,14 @@ type TripSearchForm = Omit<TripSearchPayload, 'page' | 'limit' | 'serviceDate'> 
   serviceDate?: Dayjs
 }
 
-const defaultTripQuery: Required<Pick<TripQuery, 'page' | 'limit'>> = {
+const defaultTripQuery: TripQuery = {
   page: 1,
   limit: 20,
+  search: undefined,
+  status: undefined,
+  routeId: undefined,
+  trainId: undefined,
+  serviceDate: undefined,
 }
 
 const defaultTripSearchPage = {
@@ -131,7 +137,7 @@ export function TripsPage() {
   const [form] = Form.useForm<TripFormModel>()
   const [filterForm] = Form.useForm<TripFilterForm>()
   const [searchForm] = Form.useForm<TripSearchForm>()
-  const [query, setQuery] = useState<TripQuery>(defaultTripQuery)
+  const { query, setQuery, resetQuery } = useUrlQuery<TripQuery>({ defaults: defaultTripQuery })
   const [searchQuery, setSearchQuery] = useState<TripSearchPayload | null>(null)
   const [editingTrip, setEditingTrip] = useState<Trip | null>(null)
   const [detailTripId, setDetailTripId] = useState<string | null>(null)
@@ -366,8 +372,19 @@ export function TripsPage() {
 
   const resetFilter = () => {
     filterForm.resetFields()
-    setQuery(defaultTripQuery)
+    resetQuery()
   }
+
+  useEffect(() => {
+    filterForm.setFieldsValue({
+      search: query.search,
+      status: query.status,
+      routeId: query.routeId,
+      trainId: query.trainId,
+      serviceDate: undefined,
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const handleTripSearch = (values: TripSearchForm) => {
     if (values.fromStationId === values.toStationId) {

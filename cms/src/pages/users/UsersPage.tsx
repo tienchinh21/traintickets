@@ -1,7 +1,7 @@
 import { DeleteOutlined, EditOutlined, EyeOutlined, PlusOutlined } from '@ant-design/icons'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { App as AntApp, Button, Card, Descriptions, Drawer, Form, Input, Modal, Result, Select, Space, Tag } from 'antd'
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { accessControlApi } from '@/features/access-control/api/accessControlApi'
 import { useAuth } from '@/features/auth/hooks/useAuth'
 import { usersApi } from '@/features/users/api/usersApi'
@@ -15,6 +15,7 @@ import type {
 } from '@/features/users/types/user.types'
 import { getApiError } from '@/shared/api/errors'
 import { PageHeader } from '@/shared/components/PageHeader'
+import { useUrlQuery } from '@/shared/hooks/useUrlQuery'
 import { CoreTable, createActionColumn } from '@/shared/components/table'
 import type { ProColumns } from '@/shared/components/table'
 
@@ -22,9 +23,12 @@ type UserFormModel = Omit<UserFormValues, 'password'> & {
   password?: string
 }
 
-const defaultUserQuery: Required<Pick<UserListQuery, 'page' | 'limit'>> = {
+const defaultUserQuery: UserListQuery = {
   page: 1,
   limit: 20,
+  search: undefined,
+  userType: undefined,
+  status: undefined,
 }
 
 const userTypeOptions: Array<{ label: string; value: UserType }> = [
@@ -84,7 +88,7 @@ export function UsersPage() {
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [viewingUser, setViewingUser] = useState<User | null>(null)
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [query, setQuery] = useState<UserListQuery>(defaultUserQuery)
+  const { query, setQuery, resetQuery } = useUrlQuery<UserListQuery>({ defaults: defaultUserQuery })
 
   const canRead = hasPermission('USERS_READ')
   const canCreate = hasPermission('USERS_CREATE')
@@ -268,8 +272,17 @@ export function UsersPage() {
 
   const resetFilter = () => {
     filterForm.resetFields()
-    setQuery(defaultUserQuery)
+    resetQuery()
   }
+
+  useEffect(() => {
+    filterForm.setFieldsValue({
+      search: query.search,
+      userType: query.userType,
+      status: query.status,
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const actionColumn = createActionColumn<User>((record) => [
     {

@@ -7,15 +7,16 @@ export function TimChuyenPage() {
   return (
     <AppShell>
       <section className="flex flex-col gap-4">
-        <div className="flex flex-col justify-between gap-3 md:flex-row md:items-end">
-          <div>
-            <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">Tìm chuyến</p>
-            <h1 className="mt-2 text-3xl font-black tracking-normal text-[#172033]">Hà Nội đến Sài Gòn</h1>
-            <p className="mt-1 text-sm font-medium text-slate-500">So sánh giờ chạy, tiện ích, giá vé và tình trạng chỗ.</p>
-          </div>
-          <div className="w-fit rounded-full bg-accent-cta/25 px-4 py-2 text-sm font-black text-[#083f67]">
-            3 chuyến phù hợp
-          </div>
+        <div>
+          <p className="text-xs font-black uppercase tracking-[0.18em] text-primary">
+            Tìm chuyến
+          </p>
+          <h1 className="mt-2 text-3xl font-black tracking-normal text-[#172033]">
+            Chọn chuyến tàu
+          </h1>
+          <p className="mt-1 text-sm font-medium text-slate-500">
+            Chọn ga đi, ga đến, ngày và giờ khởi hành để tìm chuyến phù hợp.
+          </p>
         </div>
         <BookingSearchPanel />
       </section>

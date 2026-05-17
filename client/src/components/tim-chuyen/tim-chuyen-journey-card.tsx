@@ -1,32 +1,31 @@
 "use client";
 
-import { ArrowRight, Clock3, Gauge, Luggage, TrainFront } from "lucide-react";
+import { ArrowRight, Clock3, MapPinned, TrainFront } from "lucide-react";
 import Link from "next/link";
 
 import { RouteTimeline } from "@/components/core/route-timeline";
-import { StatusBadge } from "@/components/core/status-badge";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
-import { formatCurrency } from "@/lib/format";
-import { useBookingStore } from "@/store/booking-store";
-import type { TrainJourney } from "@/types/train";
+import type { ClientTripSearchItem, StationStop } from "@/types/train";
 
-export function TimChuyenJourneyCard({ journey }: { journey: TrainJourney }) {
-  const selectTrain = useBookingStore((state) => state.selectTrain);
-  const selectedTrain = useBookingStore((state) => state.selectedTrain);
-  const cheapestFare = journey.fares.reduce((lowest, fare) => (fare.price < lowest.price ? fare : lowest), journey.fares[0]);
-  const isSelected = selectedTrain.id === journey.id;
+export function TimChuyenJourneyCard({
+  journey,
+}: {
+  journey: ClientTripSearchItem;
+}) {
+  const duration = formatDuration(journey.durationMinutes);
+  const timelineStops: StationStop[] = journey.stops.map((stop) => ({
+    name: stop.name,
+    code: stop.code,
+    time: formatTime(stop.scheduledDepartureAt ?? stop.scheduledArrivalAt),
+    active:
+      stop.stationId === journey.from.stationId ||
+      stop.stationId === journey.to.stationId,
+  }));
 
   return (
-    <Card
-      className={
-        isSelected
-          ? "border-primary bg-white py-0 shadow-[0_18px_42px_rgba(37,99,235,0.16)] ring-2 ring-primary"
-          : "border-sky-100 bg-white py-0 shadow-[0_14px_34px_rgba(8,63,103,0.08)]"
-      }
-    >
+    <Card className="border-sky-100 bg-white py-0 shadow-[0_14px_34px_rgba(8,63,103,0.08)]">
       <CardContent className="p-5">
         <div className="flex flex-col gap-5">
           <div className="flex items-start justify-between gap-4">
@@ -36,67 +35,76 @@ export function TimChuyenJourneyCard({ journey }: { journey: TrainJourney }) {
               </span>
               <div className="min-w-0">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h3 className="text-xl font-black text-[#172033]">{journey.code}</h3>
-                  <Badge className="max-w-full truncate border-sky-100 bg-white text-[#172033]" variant="outline">
-                    {journey.operator}
+                  <h3 className="text-xl font-black text-[#172033]">
+                    {journey.code}
+                  </h3>
+                  <Badge
+                    className="max-w-full truncate border-sky-100 bg-white text-[#172033]"
+                    variant="outline"
+                  >
+                    {journey.train.name}
                   </Badge>
                 </div>
-                <p className="mt-1 text-sm font-medium text-slate-500">{journey.distance}</p>
+                <p className="mt-1 text-sm font-medium text-slate-500">
+                  {journey.route.name}
+                </p>
               </div>
             </div>
-            <StatusBadge status={journey.status} />
+            <Badge className="bg-primary/10 text-primary" variant="secondary">
+              {journey.status}
+            </Badge>
           </div>
 
           <div className="grid gap-5 lg:grid-cols-[150px_minmax(0,1fr)_150px] lg:items-center">
-            <StationTime align="left" name={journey.from.name} platform={journey.from.platform} time={journey.from.time} />
+            <StationTime
+              align="left"
+              name={journey.from.name}
+              time={formatTime(journey.from.scheduledDepartureAt)}
+            />
             <div className="min-w-0">
               <div className="mx-auto flex max-w-[520px] flex-col items-center gap-2">
-                <Badge className="bg-accent-cta text-[#083f67]" variant="secondary">
+                <Badge
+                  className="bg-accent-cta text-[#083f67]"
+                  variant="secondary"
+                >
                   <Clock3 data-icon="inline-start" />
-                  {journey.duration}
+                  {duration}
                 </Badge>
                 <div className="h-px w-full bg-sky-100" />
-                <RouteTimeline compact stops={journey.stops} />
+                <RouteTimeline compact stops={timelineStops} />
               </div>
             </div>
-            <StationTime align="right" name={journey.to.name} platform={journey.to.platform} time={journey.to.time} />
+            <StationTime
+              align="right"
+              name={journey.to.name}
+              time={formatTime(journey.to.scheduledArrivalAt)}
+            />
           </div>
 
-          <div className="grid gap-4 border-t border-sky-100 pt-4 lg:grid-cols-[minmax(0,1fr)_180px_170px] lg:items-end">
+          <div className="flex flex-col gap-4 border-t border-sky-100 pt-4 md:flex-row md:items-end md:justify-between">
             <div className="flex min-w-0 flex-wrap gap-2">
-              {journey.amenities.map((amenity) => (
-                <Badge className="border-sky-100 bg-white text-[#172033]" key={amenity} variant="outline">
-                  <Luggage data-icon="inline-start" />
-                  {amenity}
-                </Badge>
-              ))}
-            </div>
-            <div className="min-w-0">
-              <div className="mb-2 flex items-center justify-between text-sm">
-                <span className="flex items-center gap-1 font-medium text-slate-500">
-                  <Gauge className="size-4" />
-                  Đúng giờ
-                </span>
-                <span className="font-black text-[#172033]">{journey.punctuality}%</span>
-              </div>
-              <Progress value={journey.punctuality} />
-            </div>
-            <div className="flex items-end justify-between gap-4 lg:flex-col lg:items-end">
-              <div className="lg:text-right">
-                <span className="text-xs font-bold uppercase tracking-[0.12em] text-slate-400">Từ</span>
-                <div className="text-2xl font-black text-[#172033]">{formatCurrency(cheapestFare.price)}</div>
-              </div>
-              <Button
-                className="h-10 rounded-xl px-4 font-black"
-                disabled={journey.status === "sold-out"}
-                nativeButton={false}
-                onClick={() => selectTrain(journey)}
-                render={<Link href={`/chuyen-tau/${journey.id}`} />}
+              <Badge
+                className="border-sky-100 bg-white text-[#172033]"
+                variant="outline"
               >
-                Chi tiết
-                <ArrowRight data-icon="inline-end" />
-              </Button>
+                <MapPinned data-icon="inline-start" />
+                {journey.distanceKm} km
+              </Badge>
+              <Badge
+                className="border-sky-100 bg-white text-[#172033]"
+                variant="outline"
+              >
+                Chưa có giá vé
+              </Badge>
             </div>
+            <Button
+              className="h-10 rounded-xl px-4 font-black"
+              nativeButton={false}
+              render={<Link href={`/chuyen-tau/${journey.id}`} />}
+            >
+              Chi tiết
+              <ArrowRight data-icon="inline-end" />
+            </Button>
           </div>
         </div>
       </CardContent>
@@ -107,19 +115,46 @@ export function TimChuyenJourneyCard({ journey }: { journey: TrainJourney }) {
 function StationTime({
   align,
   name,
-  platform,
   time,
 }: {
   align: "left" | "right";
   name: string;
-  platform: string;
   time: string;
 }) {
   return (
     <div className={align === "right" ? "text-left lg:text-right" : undefined}>
-      <div className="text-4xl font-black leading-none tracking-normal text-[#0f172a]">{time}</div>
+      <div className="text-4xl font-black leading-none tracking-normal text-[#0f172a]">
+        {time}
+      </div>
       <div className="mt-2 text-base font-black text-[#172033]">{name}</div>
-      <div className="mt-1 text-sm font-medium text-slate-500">{platform}</div>
     </div>
   );
+}
+
+function formatTime(value: string | null) {
+  if (!value) {
+    return "--:--";
+  }
+
+  return new Intl.DateTimeFormat("vi-VN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+    timeZone: "Asia/Ho_Chi_Minh",
+  }).format(new Date(value));
+}
+
+function formatDuration(minutes: number | null) {
+  if (minutes === null) {
+    return "Chưa rõ";
+  }
+
+  const hours = Math.floor(minutes / 60);
+  const remainingMinutes = minutes % 60;
+
+  if (hours === 0) {
+    return `${remainingMinutes} phút`;
+  }
+
+  return `${hours}h ${remainingMinutes.toString().padStart(2, "0")}m`;
 }

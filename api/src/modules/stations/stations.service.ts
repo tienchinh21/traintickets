@@ -1,8 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, RouteStatus } from '@prisma/client';
+import { Prisma, RouteStatus, StationStatus } from '@prisma/client';
 import { AppException } from '../../common/exceptions/app.exception';
 import { getPaginationOffset } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../database/prisma/prisma.service';
+import { ClientStationQueryDto } from './dto/client-station-query.dto';
 import { CreateStationDto } from './dto/create-station.dto';
 import { StationQueryDto } from './dto/station-query.dto';
 import { UpdateStationDto } from './dto/update-station.dto';
@@ -54,6 +55,46 @@ export class StationsService {
 
     return {
       data: stations.map((station) => this.serializeStation(station)),
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      },
+      message: 'Lấy danh sách ga thành công'
+    };
+  }
+
+  async findManyForClient(query: ClientStationQueryDto) {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 20;
+    const city = query.province ?? query.city;
+    const where: Prisma.StationWhereInput = {
+      deletedAt: null,
+      status: StationStatus.ACTIVE,
+      ...(city ? { city: { contains: city } } : {}),
+      ...(query.search
+        ? {
+            OR: [
+              { code: { contains: query.search } },
+              { name: { contains: query.search } }
+            ]
+          }
+        : {})
+    };
+
+    const [stations, total] = await this.prisma.$transaction([
+      this.prisma.station.findMany({
+        where,
+        orderBy: [{ code: 'asc' }],
+        skip: getPaginationOffset(page, limit),
+        take: limit
+      }),
+      this.prisma.station.count({ where })
+    ]);
+
+    return {
+      data: stations.map((station) => this.serializeClientStation(station)),
       meta: {
         page,
         limit,
@@ -120,6 +161,16 @@ export class StationsService {
       ...station,
       latitude: station.latitude?.toString() ?? null,
       longitude: station.longitude?.toString() ?? null
+    };
+  }
+
+  private serializeClientStation(station: NonNullable<StationRecord>) {
+    return {
+      id: station.id,
+      code: station.code,
+      name: station.name,
+      city: station.city,
+      address: station.address
     };
   }
 

@@ -3,10 +3,17 @@ import {
   Injectable,
   NotFoundException
 } from '@nestjs/common';
-import { Prisma, RouteStatus, TrainStatus, TripStatus } from '@prisma/client';
+import {
+  Prisma,
+  RouteStatus,
+  StationStatus,
+  TrainStatus,
+  TripStatus
+} from '@prisma/client';
 import { AppException } from '../../common/exceptions/app.exception';
 import { getPaginationOffset } from '../../common/utils/pagination.util';
 import { PrismaService } from '../../database/prisma/prisma.service';
+import { ClientSearchTripsDto } from './dto/client-search-trips.dto';
 import { CreateTripDto } from './dto/create-trip.dto';
 import { GenerateTripCodeDto } from './dto/generate-trip-code.dto';
 import { SearchTripsDto } from './dto/search-trips.dto';
@@ -340,6 +347,113 @@ export class TripsService {
     };
   }
 
+  async searchForClient(dto: ClientSearchTripsDto) {
+    if (dto.fromStationId === dto.toStationId) {
+      throw new BadRequestException('Ga đi và ga đến phải khác nhau');
+    }
+
+    await this.ensureClientStationsAreUsable([
+      dto.fromStationId,
+      dto.toStationId
+    ]);
+
+    const page = dto.page ?? 1;
+    const limit = dto.limit ?? 20;
+    const serviceDate = this.parseServiceDate(dto.serviceDate);
+    const departureAfter = this.resolveDepartureAfter(
+      dto.serviceDate,
+      dto.departureTime
+    );
+    const where: Prisma.TripWhereInput = {
+      deletedAt: null,
+      status: TripStatus.OPEN,
+      serviceDate,
+      route: {
+        deletedAt: null,
+        status: RouteStatus.ACTIVE
+      },
+      train: {
+        deletedAt: null,
+        status: TrainStatus.ACTIVE
+      },
+      AND: [
+        {
+          stops: {
+            some: {
+              stationId: dto.fromStationId
+            }
+          }
+        },
+        {
+          stops: {
+            some: {
+              stationId: dto.toStationId
+            }
+          }
+        }
+      ]
+    };
+
+    const allTrips = await this.prisma.trip.findMany({
+      where,
+      include: tripInclude
+    });
+
+    const matchedTrips = allTrips
+      .map((trip) => {
+        const fromStop = trip.stops.find(
+          (stop) => stop.stationId === dto.fromStationId
+        );
+        const toStop = trip.stops.find(
+          (stop) => stop.stationId === dto.toStationId
+        );
+
+        return { trip, fromStop, toStop };
+      })
+      .filter(({ fromStop, toStop }) => {
+        if (!fromStop || !toStop) {
+          return false;
+        }
+
+        return (
+          fromStop.stopOrder < toStop.stopOrder &&
+          fromStop.scheduledDepartureAt !== null &&
+          fromStop.scheduledDepartureAt >= departureAfter
+        );
+      })
+      .sort((left, right) => {
+        const leftTime = left.fromStop?.scheduledDepartureAt?.getTime() ?? 0;
+        const rightTime = right.fromStop?.scheduledDepartureAt?.getTime() ?? 0;
+
+        return (
+          leftTime - rightTime || left.trip.code.localeCompare(right.trip.code)
+        );
+      });
+
+    const total = matchedTrips.length;
+    const offset = getPaginationOffset(page, limit);
+    const pagedTrips = matchedTrips
+      .slice(offset, offset + limit)
+      .map(({ trip, fromStop, toStop }) =>
+        this.serializeClientTrip(
+          trip,
+          fromStop as NonNullable<typeof fromStop>,
+          toStop as NonNullable<typeof toStop>
+        )
+      );
+
+    return {
+      data: pagedTrips,
+      meta: {
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+      },
+      message: 'Tìm chuyến thành công'
+    };
+  }
+
   private async ensureRouteIsUsable(routeId: string) {
     const route = await this.prisma.route.findFirst({
       where: {
@@ -571,6 +685,10 @@ export class TripsService {
     return new Date(`${value}T00:00:00.000Z`);
   }
 
+  private resolveDepartureAfter(serviceDate: string, departureTime: string) {
+    return new Date(`${serviceDate}T${departureTime}:00.000Z`);
+  }
+
   private formatServiceDateCode(serviceDate: Date) {
     return serviceDate.toISOString().slice(0, 10).replace(/-/g, '');
   }
@@ -596,5 +714,95 @@ export class TripsService {
         }
       }))
     };
+  }
+
+  private async ensureClientStationsAreUsable(stationIds: string[]) {
+    const stations = await this.prisma.station.findMany({
+      where: {
+        id: { in: stationIds },
+        deletedAt: null,
+        status: StationStatus.ACTIVE
+      },
+      select: { id: true }
+    });
+    const foundStationIds = new Set(stations.map((station) => station.id));
+    const missingStationIds = stationIds.filter(
+      (stationId) => !foundStationIds.has(stationId)
+    );
+
+    if (missingStationIds.length > 0) {
+      throw new AppException(
+        'STATION_NOT_USABLE',
+        'Ga đi hoặc ga đến không tồn tại hoặc không hoạt động',
+        400,
+        ['Ga phải tồn tại, chưa bị xóa và đang ACTIVE']
+      );
+    }
+  }
+
+  private serializeClientTrip(
+    trip: TripWithDetail,
+    fromStop: TripWithDetail['stops'][number],
+    toStop: TripWithDetail['stops'][number]
+  ) {
+    return {
+      id: trip.id,
+      code: trip.code,
+      status: trip.status,
+      train: {
+        id: trip.train.id,
+        code: trip.train.code,
+        name: trip.train.name
+      },
+      route: {
+        id: trip.route.id,
+        code: trip.route.code,
+        name: trip.route.name
+      },
+      from: {
+        stationId: fromStop.stationId,
+        code: fromStop.station.code,
+        name: fromStop.station.name,
+        city: fromStop.station.city,
+        scheduledDepartureAt:
+          fromStop.scheduledDepartureAt?.toISOString() ?? null
+      },
+      to: {
+        stationId: toStop.stationId,
+        code: toStop.station.code,
+        name: toStop.station.name,
+        city: toStop.station.city,
+        scheduledArrivalAt: toStop.scheduledArrivalAt?.toISOString() ?? null
+      },
+      durationMinutes: this.resolveDurationMinutes(
+        fromStop.scheduledDepartureAt,
+        toStop.scheduledArrivalAt
+      ),
+      distanceKm: toStop.distanceFromStartKm
+        .minus(fromStop.distanceFromStartKm)
+        .toString(),
+      stops: trip.stops.map((stop) => ({
+        stationId: stop.stationId,
+        code: stop.station.code,
+        name: stop.station.name,
+        scheduledArrivalAt: stop.scheduledArrivalAt?.toISOString() ?? null,
+        scheduledDepartureAt: stop.scheduledDepartureAt?.toISOString() ?? null,
+        stopOrder: stop.stopOrder
+      }))
+    };
+  }
+
+  private resolveDurationMinutes(
+    departureAt: Date | null,
+    arrivalAt: Date | null
+  ) {
+    if (!departureAt || !arrivalAt) {
+      return null;
+    }
+
+    return Math.max(
+      0,
+      Math.round((arrivalAt.getTime() - departureAt.getTime()) / 60_000)
+    );
   }
 }
